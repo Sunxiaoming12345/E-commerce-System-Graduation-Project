@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.example.mailadmin.mapper.PaymentMapper">
+
+    <!-- 支付记录分页查询 -->
+    <select id="pageQuery" resultType="com.example.mailadmin.entity.Payments">
+        select * from payments
+        <where>
+            <if test="orderId != null">
+                and order_id = #{orderId}
+            </if>
+            <if test="status != null">
+                and status = #{status}
+            </if>
+            <if test="paymentMethod != null">
+                and payment_method = #{paymentMethod}
+            </if>
+        </where>
+    </select>
+
+    <!-- 更新支付状态 -->
+    <update id="updateStatus">
+        update payments
+        set status = #{status},
+            update_time = now()
+        where payment_id = #{paymentId}
+    </update>
+
+    <!-- 获取总支付金额 -->
+    <select id="getTotalAmount" resultType="java.math.BigDecimal">
+        select COALESCE(sum(amount), 0) from payments where status = 1
+    </select>
+
+    <!-- 获取今日支付金额 -->
+    <select id="getTodayAmount" resultType="java.math.BigDecimal">
+        select COALESCE(sum(amount), 0) from payments where status = 1 and date(pay_time) = current_date
+    </select>
+
+    <!-- 获取本月支付金额 -->
+    <select id="getMonthAmount" resultType="java.math.BigDecimal">
+        select COALESCE(sum(amount), 0) from payments where status = 1 and date_format(pay_time, '%Y-%m') = date_format(current_date, '%Y-%m')
+    </select>
+
+    <!-- 获取支付方式分布：返回 paymentMethod, amount 供 Service 组装 Map -->
+    <select id="getPaymentMethodDistribution" resultType="java.util.HashMap">
+        select payment_method as paymentMethod, COALESCE(sum(amount), 0) as amount
+        from payments
+        where status = 1
+        group by payment_method
+    </select>
+
+    <!-- 获取支付状态分布：返回 status, cnt 供 Service 组装 Map -->
+    <select id="getPaymentStatusDistribution" resultType="java.util.HashMap">
+        select status as status, count(*) as cnt
+        from payments
+        group by status
+    </select>
+
+    <!-- 获取总支付订单数 -->
+    <select id="getTotalPaymentCount" resultType="java.lang.Integer">
+        select count(*) from payments
+    </select>
+
+    <!-- 获取成功支付订单数 -->
+    <select id="getSuccessfulPaymentCount" resultType="java.lang.Integer">
+        select count(*) from payments where status = 1
+    </select>
+
+    <!-- 获取失败支付订单数 -->
+    <select id="getFailedPaymentCount" resultType="java.lang.Integer">
+        select count(*) from payments where status = 2
+    </select>
+
+</mapper>

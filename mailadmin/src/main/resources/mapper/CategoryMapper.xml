@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.example.mailadmin.mapper.CategoryMapper">
+    <resultMap id="BaseResultMap" type="com.example.mailadmin.entity.Category">
+        <id column="id" property="id" />
+        <result column="name" property="name" />
+        <result column="description" property="description" />
+        <result column="sort" property="sort" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, name, description, sort, create_time, update_time
+    </sql>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List" />
+        from categories
+        order by sort asc, create_time desc
+    </select>
+
+    <select id="selectById" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List" />
+        from categories
+        where id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="com.example.mailadmin.entity.Category">
+        insert into categories (name, description, sort, create_time, update_time)
+        values (#{name}, #{description}, #{sort}, now(), now())
+    </insert>
+
+    <update id="update" parameterType="com.example.mailadmin.entity.Category">
+        update categories
+        set name = #{name},
+            description = #{description},
+            sort = #{sort},
+            update_time = now()
+        where id = #{id}
+    </update>
+
+    <delete id="deleteByIds" parameterType="long[]">
+        delete from categories
+        where id in
+        <foreach collection="array" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

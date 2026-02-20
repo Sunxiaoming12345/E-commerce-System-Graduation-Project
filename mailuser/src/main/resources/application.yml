@@ -2,17 +2,20 @@ server:
   port: 8082
 
 spring:
-  application:
-    name: mailuser
   datasource:
     url: jdbc:mysql://localhost:3306/bysj?useUnicode=true&characterEncoding=utf8&serverTimezone=GMT%2B8
     username: root
     password: 1234
     driver-class-name: com.mysql.cj.jdbc.Driver
+  application:
+    name: mailuser
   cloud:
     nacos:
       discovery:
         server-addr: 192.168.100.128:8848
+  mvc:
+    pathmatch:
+      matching-strategy: ANT_PATH_MATCHER
 mybatis:
   mapper-locations: classpath:mapper/*.xml
   type-aliases-package: com.example.mailuser.entity

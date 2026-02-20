@@ -5,6 +5,9 @@ import com.example.mailuser.dto.AddCartDTO;
 import com.example.mailuser.service.ShopCartService;
 import com.example.mailuser.vo.CartVO;
 import com.example.result.Result;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,6 +21,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/user/shopCart")
+@Api(tags = "购物车管理")
 public class ShopCartController {
 
     @Autowired
@@ -30,7 +34,8 @@ public class ShopCartController {
      * @return 结果
      */
     @PostMapping("/add")
-    public Result addCart(@RequestBody AddCartDTO addCartDTO) {
+    @ApiOperation(value = "添加商品到购物车", notes = "将商品添加到购物车，已存在则更新数量")
+    public Result addCart(@ApiParam(name = "addCartDTO", value = "添加购物车信息", required = true) @RequestBody AddCartDTO addCartDTO) {
         // 从BaseContext中获取用户ID
         Long userId = BaseContext.getCurrentId();
         shopCartService.addCart(userId, addCartDTO);
@@ -45,7 +50,9 @@ public class ShopCartController {
      * @return 结果
      */
     @PutMapping("/updateQuantity")
-    public Result updateQuantity(@RequestParam Long productId, @RequestParam Integer quantity) {
+    @ApiOperation(value = "更新购物车商品数量", notes = "更新购物车中商品的购买数量")
+    public Result updateQuantity(@ApiParam(name = "productId", value = "商品ID", required = true) @RequestParam Long productId, 
+                                 @ApiParam(name = "quantity", value = "商品数量", required = true) @RequestParam Integer quantity) {
         // 从BaseContext中获取用户ID
         Long userId = BaseContext.getCurrentId();
         shopCartService.updateQuantity(userId, productId, quantity);
@@ -59,7 +66,8 @@ public class ShopCartController {
      * @return 结果
      */
     @DeleteMapping("/delete")
-    public Result deleteCart(@RequestParam Long productId) {
+    @ApiOperation(value = "删除购物车商品", notes = "从购物车中移除指定商品")
+    public Result deleteCart(@ApiParam(name = "productId", value = "商品ID", required = true) @RequestParam Long productId) {
         // 从BaseContext中获取用户ID
         Long userId = BaseContext.getCurrentId();
         shopCartService.deleteCart(userId, productId);
@@ -72,6 +80,7 @@ public class ShopCartController {
      * @return 结果
      */
     @DeleteMapping("/clear")
+    @ApiOperation(value = "清空购物车", notes = "清空当前用户的所有购物车商品")
     public Result clearCart() {
         // 从BaseContext中获取用户ID
         Long userId = BaseContext.getCurrentId();
@@ -85,6 +94,7 @@ public class ShopCartController {
      * @return 购物车列表
      */
     @GetMapping("/list")
+    @ApiOperation(value = "查询用户购物车列表", notes = "获取当前用户的购物车商品列表，包含商品详细信息")
     public Result<List<CartVO>> getCartList() {
         // 从BaseContext中获取用户ID
         Long userId = BaseContext.getCurrentId();
