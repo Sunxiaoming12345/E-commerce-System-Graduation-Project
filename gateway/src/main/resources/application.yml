@@ -18,13 +18,15 @@ spring:
         - id: mailadmin
           uri: lb://mailadmin
           predicates:
-            - Path=/admin/orders/** ,/products/products/**
+            - Path=/admin/**
+        - id: mailadmin-products
+          uri: lb://mailadmin
+          predicates:
+            - Path=/products/**
         - id: mailuser
           uri: lb://mailuser
           predicates:
-            - Path=/user/orders/**
-
-
+            - Path=/user/**
 
 
 

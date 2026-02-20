@@ -1,6 +1,10 @@
 package com.example.mailadmin.service.impl;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import com.example.constant.MessageConstant;
 import com.example.constant.StatusConstant;
@@ -9,6 +13,7 @@ import com.example.mailadmin.dto.EditProductsDTO;
 import com.example.mailadmin.dto.ProductsPageQueryDTO;
 import com.example.mailadmin.entity.Products;
 import com.example.mailadmin.mapper.ProductsMapper;
+import com.example.mailadmin.dto.StockUpdateDTO;
 import com.example.mailadmin.service.ProductsService;
 import com.example.result.PageResult;
 import com.github.pagehelper.Page;
@@ -75,5 +80,36 @@ public class ProductsServiceImpl implements ProductsService
            productsMapper.deleteProductsByIds(ids);
         }
 
+    }
+
+    // 更新商品库存
+    @Override
+    public void updateStock(Long id, Integer stock) {
+        productsMapper.updateStock(id, stock);
+    }
+
+    // 批量更新商品库存
+    @Override
+    public void batchUpdateStock(List<StockUpdateDTO> stockUpdateDTOs) {
+        List<Map<String, Object>> stockUpdateList = new ArrayList<>();
+        for (StockUpdateDTO dto : stockUpdateDTOs) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", dto.getId());
+            map.put("stock", dto.getStock());
+            stockUpdateList.add(map);
+        }
+        productsMapper.batchUpdateStock(stockUpdateList);
+    }
+
+    // 上架商品
+    @Override
+    public void enable(Long[] ids) {
+        productsMapper.enable(ids);
+    }
+
+    // 下架商品
+    @Override
+    public void disable(Long[] ids) {
+        productsMapper.disable(ids);
     }
 }

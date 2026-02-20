@@ -11,6 +11,10 @@ public class ProductsPageQueryDTO {
 
     //商品名称
     private String name;
+    //分类ID
+    private Long categoryId;
+    //商品状态
+    private Integer status;
     //页码
     private int page;
 

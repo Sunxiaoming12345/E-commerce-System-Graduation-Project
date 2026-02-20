@@ -48,6 +48,53 @@
     <if test="name != null">
       and name like '%${name}%'
     </if>
+    <if test="categoryId != null">
+      and category_id = #{categoryId}
+    </if>
+    <if test="status != null">
+      and status = #{status}
+    </if>
   </where>
     </select>
+
+    <update id="updateStock">
+        update products
+        set stock = #{stock},
+            update_time = now()
+        where id = #{id}
+    </update>
+
+    <update id="batchUpdateStock">
+        update products
+        set stock = case id
+        <foreach collection="stockUpdateList" item="item" separator="">
+            when #{item.id} then #{item.stock}
+        </foreach>
+        end,
+            update_time = now()
+        where id in
+        <foreach collection="stockUpdateList" item="item" separator="," open="(" close=")">
+            #{item.id}
+        </foreach>
+    </update>
+
+    <update id="enable">
+        update products
+        set status = 1,
+            update_time = now()
+        where id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
+    <update id="disable">
+        update products
+        set status = 0,
+            update_time = now()
+        where id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
 </mapper>

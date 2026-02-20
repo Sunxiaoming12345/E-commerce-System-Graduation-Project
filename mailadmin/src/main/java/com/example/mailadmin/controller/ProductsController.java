@@ -4,19 +4,16 @@ package com.example.mailadmin.controller;
 import com.example.mailadmin.dto.AddProductsDTO;
 import com.example.mailadmin.dto.EditProductsDTO;
 import com.example.mailadmin.dto.ProductsPageQueryDTO;
+import com.example.mailadmin.dto.StockUpdateDTO;
 import com.example.mailadmin.entity.Products;
 import com.example.mailadmin.service.ProductsService;
 import com.example.result.PageResult;
 import com.example.result.Result;
+
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.*;
 
 import static com.example.result.Result.success;
 
@@ -39,7 +36,7 @@ public class ProductsController
      */
 
     @GetMapping("/page")
-    public Result<PageResult> Page(@RequestBody ProductsPageQueryDTO productsPageQueryDTO)
+    public Result<PageResult> Page(@ModelAttribute ProductsPageQueryDTO productsPageQueryDTO)
     {
 
         PageResult pageResult = productsService.PageQuery(productsPageQueryDTO);
@@ -87,6 +84,46 @@ public class ProductsController
     {
       productsService.deleteProductsByIds(ids);
       return Result.success();
+    }
+
+    /**
+     * 更新商品库存
+     */
+    @PutMapping("/updateStock")
+    public Result updateStock(@RequestParam Long id, @RequestParam Integer stock)
+    {
+        productsService.updateStock(id, stock);
+        return Result.success();
+    }
+
+    /**
+     * 批量更新商品库存
+     */
+    @PutMapping("/batchUpdateStock")
+    public Result batchUpdateStock(@RequestBody List<StockUpdateDTO> stockUpdateDTOs)
+    {
+        productsService.batchUpdateStock(stockUpdateDTOs);
+        return Result.success();
+    }
+
+    /**
+     * 上架商品
+     */
+    @PutMapping("/enable/{ids}")
+    public Result enable(@PathVariable Long[] ids)
+    {
+        productsService.enable(ids);
+        return Result.success();
+    }
+
+    /**
+     * 下架商品
+     */
+    @PutMapping("/disable/{ids}")
+    public Result disable(@PathVariable Long[] ids)
+    {
+        productsService.disable(ids);
+        return Result.success();
     }
 }
 

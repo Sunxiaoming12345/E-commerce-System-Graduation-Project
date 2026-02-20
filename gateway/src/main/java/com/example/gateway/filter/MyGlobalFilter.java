@@ -37,7 +37,7 @@ public class MyGlobalFilter implements GlobalFilter, Ordered {
         }
         Long userId=null;
         try {
-             userId=jwtUtils.parseToken(token).get("id", Long.class);
+            userId=jwtUtils.parseToken(token).get("id", Long.class);
         } catch (Exception e) {
             ServerHttpResponse response = exchange.getResponse();
             response.setStatusCode(HttpStatus.UNAUTHORIZED);

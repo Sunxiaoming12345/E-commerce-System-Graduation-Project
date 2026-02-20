@@ -6,7 +6,11 @@ import com.example.mailadmin.entity.Products;
 import com.github.pagehelper.Page;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * 商品Mapper接口
@@ -60,6 +64,39 @@ public interface ProductsMapper
     * @return
      */
     Page<Products> PageQuery(ProductsPageQueryDTO productsPageQueryDTO) ;
+
+    /**
+     * 更新商品库存
+     *
+     * @param id 商品ID
+     * @param stock 库存数量
+     * @return 结果
+     */
+    void updateStock(@Param("id") Long id, @Param("stock") Integer stock);
+
+    /**
+     * 批量更新商品库存
+     *
+     * @param stockUpdateList 库存更新列表
+     * @return 结果
+     */
+    void batchUpdateStock(@Param("stockUpdateList") List<Map<String, Object>> stockUpdateList);
+
+    /**
+     * 上架商品
+     *
+     * @param ids 商品ID数组
+     * @return 结果
+     */
+    void enable(@Param("ids") Long[] ids);
+
+    /**
+     * 下架商品
+     *
+     * @param ids 商品ID数组
+     * @return 结果
+     */
+    void disable(@Param("ids") Long[] ids);
 
 
 }
