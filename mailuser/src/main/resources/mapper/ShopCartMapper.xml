@@ -64,4 +64,15 @@
           AND product_id = #{productId}
     </select>
 
+    <!-- 获取购物车中商品的数量 -->
+    <select id="getQuantity" resultType="java.lang.Integer">
+        SELECT
+            quantity
+        FROM
+            cart
+        WHERE
+            user_id = #{userId}
+          AND product_id = #{productId}
+    </select>
+
 </mapper>

@@ -4,7 +4,6 @@ import com.example.gateway.entity.User;
 import com.example.gateway.mapper.UserMapper;
 import com.example.gateway.service.UserService;
 import com.example.gateway.utils.JwtUtils;
-import com.example.gateway.vo.AdminLoginInfo;
 import com.example.gateway.vo.UserLoginInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

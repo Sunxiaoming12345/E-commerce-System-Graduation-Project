@@ -17,4 +17,24 @@
             </if>
         </where>
     </select>
+
+    <select id="getOrderByIdAndUserId" resultType="com.example.mailuser.entity.Orders">
+        select * from orders
+        where order_id = #{orderId} and user_id = #{userId}
+    </select>
+
+    <update id="updateOrderStatus">
+        update orders
+        set order_status = #{orderStatus}, update_time = CURRENT_TIMESTAMP
+        where order_id = #{orderId}
+    </update>
+
+    <update id="updateOrderForPayment">
+        update orders
+        set order_status = #{orderStatus}, 
+            payment_method = #{paymentMethod}, 
+            pay_time = CURRENT_TIMESTAMP, 
+            update_time = CURRENT_TIMESTAMP
+        where order_id = #{orderId}
+    </update>
 </mapper>

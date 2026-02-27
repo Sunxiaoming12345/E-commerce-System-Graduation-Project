@@ -114,18 +114,13 @@ const getStatusText = (status) => {
 }
 
 const viewOrderDetail = (id) => {
-  // 这里可以跳转到订单详情页面，暂时简化处理
-  ElMessage.info('查看订单详情功能待实现')
+  // 跳转到订单详情页面
+  router.push(`/order-detail/${id}`)
 }
 
-const handlePayOrder = async (id) => {
-  try {
-    await payOrder({ orderId: id })
-    ElMessage.success('支付成功')
-    loadOrders()
-  } catch (error) {
-    ElMessage.error('支付失败')
-  }
+const handlePayOrder = (id) => {
+  // 跳转到订单详情页面，让用户选择支付方式
+  router.push(`/order-detail/${id}`)
 }
 
 const handleCancelOrder = async (id) => {

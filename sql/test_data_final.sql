@@ -10,7 +10,6 @@ TRUNCATE TABLE cart;
 TRUNCATE TABLE products;
 TRUNCATE TABLE categories;
 TRUNCATE TABLE user;
-TRUNCATE TABLE admin;
 
 -- ==================== 用户表 (user) ====================
 -- 插入用户数据
@@ -130,10 +129,4 @@ INSERT INTO `cart` (`user_id`, `product_id`, `quantity`) VALUES
 (8, 18, 2),
 (8, 19, 1);
 
--- ==================== 管理员表 (admin) ====================
--- 插入管理员数据
-INSERT INTO `admin` (`name`, `username`, `password`, `phone`) VALUES
-('超级管理员', 'admin', '123456', '13900139000'),
-('技术管理员', 'tech', '123456', '13900139001'),
-('财务管理员', 'finance', '123456', '13900139002'),
-('市场管理员', 'market', '123456', '13900139003');
+

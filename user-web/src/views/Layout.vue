@@ -3,7 +3,7 @@
     <header class="header">
       <div class="container">
         <div class="header-left">
-          <router-link to="/" class="logo">用户端</router-link>
+          <router-link to="/" class="logo">首页</router-link>
         </div>
         <div class="header-center">
           <el-input
@@ -38,7 +38,7 @@
     </main>
     <footer class="footer">
       <div class="container">
-        <p>© 2024 用户端</p>
+        <p>© 孙小明</p>
       </div>
     </footer>
   </div>

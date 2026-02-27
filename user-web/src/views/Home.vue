@@ -17,7 +17,6 @@
             <p class="product-price">¥{{ product.price }}</p>
             <p class="product-stock" v-if="product.stock > 0">库存: {{ product.stock }}</p>
             <p class="product-stock out-of-stock" v-else>缺货</p>
-            <el-button type="primary" size="small" @click.stop="handleAddToCart(product)">加入购物车</el-button>
           </div>
         </router-link>
       </div>
@@ -40,7 +39,6 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getProducts, getCategories, getProductsByCategory } from '@/api/products'
-import { addToCart } from '@/api/cart'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()
@@ -94,14 +92,7 @@ const handleCurrentChange = (current) => {
   loadProducts()
 }
 
-const handleAddToCart = async (product) => {
-  try {
-    await addToCart({ productId: product.id, quantity: 1 })
-    ElMessage.success('已加入购物车')
-  } catch (error) {
-    ElMessage.error('加入购物车失败')
-  }
-}
+
 
 onMounted(() => {
   loadCategories()

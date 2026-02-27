@@ -18,6 +18,14 @@ public interface OrdersService {
 
     PageResult myOrders(MyOrdersPageQueryDTO myOrdersPageQueryDTO);
 
+    // 创建订单
+    void createOrder(com.example.mailuser.dto.OrderCreateDTO orderCreateDTO);
+
+    // 取消订单
+    void cancelOrder(Long orderId);
+
+    // 获取订单详情
+    Orders getOrderDetail(Long orderId);
 
     // 查询订单根据订单号
   /*  Orders select(String orderNumber);*/

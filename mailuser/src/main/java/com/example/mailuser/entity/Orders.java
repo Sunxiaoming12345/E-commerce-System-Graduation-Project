@@ -15,7 +15,7 @@ public class Orders {
     private Long userId;            // 用户ID
     private String orderNumber;     // 订单编号
     private Integer orderStatus;    // 订单状态：0-待付款，1-已付款，2-已发货，3-已完成，4-已取消
-    private Integer paymentMethod;  // 支付方式：0-支付宝，1-微信，2-银行卡
+    private Integer paymentMethod;  // 支付方式：0-支付宝，1-微信，2-余额
     private BigDecimal totalAmount; // 订单总金额
     private String shippingAddress; // 收货地址
     private String receiverName;    // 收货人姓名

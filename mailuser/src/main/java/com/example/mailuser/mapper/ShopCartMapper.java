@@ -69,4 +69,13 @@ public interface ShopCartMapper {
      */
     int checkCartItem(@Param("userId") Long userId, @Param("productId") Long productId);
 
+    /**
+     * 获取购物车中商品的数量
+     *
+     * @param userId   用户ID
+     * @param productId 商品ID
+     * @return 商品数量
+     */
+    Integer getQuantity(@Param("userId") Long userId, @Param("productId") Long productId);
+
 }

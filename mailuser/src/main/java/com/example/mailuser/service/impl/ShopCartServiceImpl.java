@@ -56,9 +56,17 @@ public class ShopCartServiceImpl implements ShopCartService {
         int count = shopCartMapper.checkCartItem(userId, productId);
 
         if (count > 0) {
-            // 商品已在购物车中，更新数量
-            shopCartMapper.updateQuantity(userId, productId, quantity);
-            log.info("更新购物车商品数量：userId={}, productId={}, quantity={}", userId, productId, quantity);
+            // 商品已在购物车中，获取原有数量并相加
+            Integer existingQuantity = shopCartMapper.getQuantity(userId, productId);
+            Integer newQuantity = existingQuantity + quantity;
+            // 检查库存是否足够
+            if (product.getStock() < newQuantity) {
+                log.error("商品库存不足：productId={}, 库存={}, 需求={}", productId, product.getStock(), newQuantity);
+                throw new RuntimeException("商品库存不足");
+            }
+            // 更新数量
+            shopCartMapper.updateQuantity(userId, productId, newQuantity);
+            log.info("更新购物车商品数量：userId={}, productId={}, quantity={}", userId, productId, newQuantity);
         } else {
             // 商品不在购物车中，添加新记录
             shopCartMapper.addCart(userId, productId, quantity);

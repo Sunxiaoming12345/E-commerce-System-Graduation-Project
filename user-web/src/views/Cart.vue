@@ -3,7 +3,8 @@
     <h2>购物车</h2>
     <el-loading v-loading="loading" element-loading-text="加载中...">
       <div v-if="cartItems.length > 0" class="cart-content">
-        <el-table :data="cartItems" style="width: 100%">
+        <el-table ref="tableRef" :data="cartItems" style="width: 100%" @selection-change="handleSelectionChange">
+          <el-table-column type="selection" width="55" />
           <el-table-column label="商品" min-width="200">
             <template #default="scope">
               <div class="cart-item-info">
@@ -17,7 +18,7 @@
           </el-table-column>
           <el-table-column label="数量" width="180">
             <template #default="scope">
-                <el-input-number v-model="scope.row.quantity" :min="1" :max="scope.row.stock" @change="handleUpdateCartItem(scope.row)" />
+                <el-input-number v-model="scope.row.quantity" :min="0" :max="scope.row.stock" @change="handleUpdateCartItem(scope.row)" />
             </template>
           </el-table-column>
           <el-table-column label="小计" width="120">
@@ -36,11 +37,11 @@
         <div class="cart-summary">
           <div class="cart-total">
             <span>合计:</span>
-            <span class="cart-total-price">¥{{ totalPrice.toFixed(2) }}</span>
+            <span class="cart-total-price">¥{{ selectedTotalPrice.toFixed(2) }}</span>
           </div>
           <div class="cart-actions">
             <el-button @click="handleClearCart">清空购物车</el-button>
-            <el-button type="primary" size="large" @click="handleCheckout">去结算</el-button>
+            <el-button type="primary" size="large" @click="handleCheckout" :disabled="selectedItems.length === 0">去结算</el-button>
           </div>
         </div>
       </div>
@@ -53,7 +54,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { getCartList, updateCartItem, removeCartItem } from '@/api/cart'
 import { createOrder } from '@/api/orders'
@@ -62,6 +63,8 @@ import { ElMessage } from 'element-plus'
 const router = useRouter()
 const cartItems = ref([])
 const loading = ref(true)
+const tableRef = ref(null)
+const selectedItems = ref([])
 
 const loadCartList = async () => {
   try {
@@ -76,15 +79,23 @@ const loadCartList = async () => {
   }
 }
 
-const totalPrice = computed(() => {
-  return cartItems.value.reduce((total, item) => {
+const selectedTotalPrice = computed(() => {
+  return selectedItems.value.reduce((total, item) => {
     return total + (item.quantity * item.price)
   }, 0)
 })
 
 const handleUpdateCartItem = async (item) => {
   try {
-    await updateCartItem({ productId: item.productId, quantity: item.quantity })
+    if (item.quantity === 0) {
+      // 数量为0时删除商品
+      await removeCartItem(item.productId)
+      ElMessage.success('商品已从购物车移除')
+      loadCartList()
+    } else {
+      // 正常更新数量
+      await updateCartItem({ productId: item.productId, quantity: item.quantity })
+    }
   } catch (error) {
     ElMessage.error('更新购物车失败')
     // 恢复之前的数量
@@ -110,29 +121,28 @@ const handleClearCart = async () => {
     }
     ElMessage.success('清空购物车成功')
     cartItems.value = []
+    selectedItems.value = []
   } catch (error) {
     ElMessage.error('清空购物车失败')
   }
 }
 
-const handleCheckout = async () => {
-  try {
-    // 创建订单
-    const orderData = {
-      items: cartItems.value.map(item => ({
-        productId: item.productId,
-        quantity: item.quantity
-      }))
-    }
-    const res = await createOrder(orderData)
-    ElMessage.success('订单创建成功')
-    // 清空购物车
-    cartItems.value = []
-    // 跳转到订单详情
-    router.push(`/orders`)
-  } catch (error) {
-    ElMessage.error('结算失败')
+const handleCheckout = () => {
+  if (selectedItems.value.length === 0) {
+    ElMessage.warning('请选择要结算的商品')
+    return
   }
+  
+  // 将选中的商品保存到本地存储
+  localStorage.setItem('selectedCartItems', JSON.stringify(selectedItems.value))
+  
+  // 跳转到订单确认页面
+  router.push('/order-confirm')
+}
+
+// 监听选择变化
+const handleSelectionChange = (val) => {
+  selectedItems.value = val
 }
 
 onMounted(() => {

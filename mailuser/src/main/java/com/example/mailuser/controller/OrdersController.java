@@ -1,6 +1,7 @@
 package com.example.mailuser.controller;
 
 import com.example.mailuser.dto.MyOrdersPageQueryDTO;
+import com.example.mailuser.dto.OrderCreateDTO;
 import com.example.mailuser.dto.PayDTO;
 import com.example.mailuser.dto.PrePurchase;
 import com.example.mailuser.entity.Orders;
@@ -62,10 +63,25 @@ public class OrdersController {
     // 创建订单
     @PostMapping("/create")
     @ApiOperation(value = "创建订单", notes = "根据购物车商品创建新订单")
-    public Result createOrder(@ApiParam(name = "orderData", value = "订单创建信息", required = true) @RequestBody Object orderData) {
-        // 这里可以根据实际需求实现订单创建逻辑
-        // 暂时返回成功，后续可以扩展
+    public Result createOrder(@ApiParam(name = "orderData", value = "订单创建信息", required = true) @RequestBody OrderCreateDTO orderData) {
+        ordersService.createOrder(orderData);
         return Result.success();
+    }
+
+    // 取消订单
+    @PutMapping("/cancel/{id}")
+    @ApiOperation(value = "取消订单", notes = "取消待支付的订单")
+    public Result cancelOrder(@ApiParam(name = "id", value = "订单ID", required = true) @PathVariable Long id) {
+        ordersService.cancelOrder(id);
+        return Result.success();
+    }
+
+    // 获取订单详情
+    @GetMapping("/{id}")
+    @ApiOperation(value = "获取订单详情", notes = "根据订单ID获取订单详情")
+    public Result<Orders> getOrderDetail(@ApiParam(name = "id", value = "订单ID", required = true) @PathVariable Long id) {
+        Orders order = ordersService.getOrderDetail(id);
+        return Result.success(order);
     }
 
 }

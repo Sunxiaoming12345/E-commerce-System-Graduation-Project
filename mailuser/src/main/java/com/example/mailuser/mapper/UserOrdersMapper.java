@@ -5,6 +5,7 @@ import com.example.mailuser.entity.Orders;
 import com.github.pagehelper.Page;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 @Mapper
 public interface UserOrdersMapper {
@@ -20,4 +21,13 @@ public interface UserOrdersMapper {
     void pay(Orders orders);
 
     Page<Orders> PageQuery(MyOrdersPageQueryDTO myOrdersPageQueryDTO);
+
+    // 根据订单ID和用户ID查询订单
+    Orders getOrderByIdAndUserId(@Param("orderId") Long orderId, @Param("userId") Long userId);
+
+    // 更新订单状态
+    void updateOrderStatus(@Param("orderId") Long orderId, @Param("orderStatus") Integer orderStatus);
+
+    // 更新订单支付信息
+    void updateOrderForPayment(@Param("orderId") Long orderId, @Param("orderStatus") Integer orderStatus, @Param("paymentMethod") Integer paymentMethod);
 }

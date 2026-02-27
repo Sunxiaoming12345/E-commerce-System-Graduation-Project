@@ -4,7 +4,7 @@
       <div v-if="product" class="product-content">
         <div class="product-left">
           <div class="product-image">
-            <img :src="product.image || 'https://via.placeholder.com/400'" :alt="product.name" />
+            <img :src="product.imageUrl || 'https://via.placeholder.com/400'" :alt="product.name" />
           </div>
         </div>
         <div class="product-right">
@@ -71,10 +71,20 @@ const handleAddToCart = async () => {
 }
 
 const handleBuyNow = () => {
-  // 直接跳转到订单确认页面，这里简化处理，先加入购物车再跳转到购物车
-  handleAddToCart().then(() => {
-    router.push('/cart')
-  })
+  // 创建订单商品信息
+  const orderItem = {
+    productId: product.value.id,
+    productName: product.value.name,
+    price: product.value.price,
+    quantity: quantity.value,
+    imageUrl: product.value.imageUrl
+  }
+  
+  // 存储到本地存储
+  localStorage.setItem('selectedCartItems', JSON.stringify([orderItem]))
+  
+  // 直接跳转到订单确认页面
+  router.push('/order-confirm')
 }
 
 onMounted(() => {

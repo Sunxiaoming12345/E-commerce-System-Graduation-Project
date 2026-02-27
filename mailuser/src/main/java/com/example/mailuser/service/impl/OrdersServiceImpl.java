@@ -49,24 +49,46 @@ public class OrdersServiceImpl implements OrdersService {
 
     }
 
+    @Autowired
+    private BalanceService balanceService;
+
     // 支付
     @Override
     public void pay(PayDTO payDTO) {
-        Long userId =BaseContext.getCurrentId();
-        Orders orders = new Orders();
-        orders.setUserId(userId);
-        orders.setOrderNumber(userId.toString()+System.currentTimeMillis());
-        orders.setOrderStatus(OrderStatus.WAIT_PAYMENT);
-        orders.setPaymentMethod(payDTO.getPaymentMethod());
-        orders.setTotalAmount(payDTO.getTotalAmount());
-        orders.setShippingAddress(payDTO.getShippingAddress());
-        orders.setReceiverName(payDTO.getReceiverName());
-        orders.setReceiverPhone(payDTO.getReceiverPhone());
-        orders.setCreateTime(LocalDateTime.now());
-        ordersMapper.pay(orders);
-
-
-
+        Long userId = BaseContext.getCurrentId();
+        log.info("支付订单：userId={}, orderId={}, paymentMethod={}", userId, payDTO.getOrderId(), payDTO.getPaymentMethod());
+        
+        // 验证订单是否存在且属于当前用户
+        Orders order = ordersMapper.getOrderByIdAndUserId(payDTO.getOrderId(), userId);
+        if (order == null) {
+            throw new RuntimeException("订单不存在");
+        }
+        
+        // 只有待支付的订单可以支付
+        if (order.getOrderStatus() != OrderStatus.WAIT_PAYMENT) {
+            throw new RuntimeException("只能支付待支付的订单");
+        }
+        
+        // 如果是余额支付，检查余额是否足够
+        if (payDTO.getPaymentMethod() == 2) {
+            boolean isEnough = balanceService.checkBalance(userId, order.getTotalAmount());
+            if (!isEnough) {
+                throw new RuntimeException("余额不足");
+            }
+            // 扣除余额
+            balanceService.decreaseBalance(userId, order.getTotalAmount());
+            log.info("余额支付成功：userId={}, amount={}", userId, order.getTotalAmount());
+        }
+        
+        // 更新订单状态为已支付，并更新支付方式
+        order.setOrderStatus(OrderStatus.PAID);
+        order.setPaymentMethod(payDTO.getPaymentMethod());
+        order.setPayTime(LocalDateTime.now());
+        
+        // 这里可以添加其他支付方式的逻辑，比如调用第三方支付接口等
+        
+        // 更新订单支付信息
+        ordersMapper.updateOrderForPayment(payDTO.getOrderId(), OrderStatus.PAID, payDTO.getPaymentMethod());
     }
 
     @Override
@@ -78,6 +100,67 @@ public class OrdersServiceImpl implements OrdersService {
         return  new PageResult(page.getTotal(), page.getResult());
     }
 
+    @Override
+    public void createOrder(com.example.mailuser.dto.OrderCreateDTO orderCreateDTO) {
+        Long userId = BaseContext.getCurrentId();
+        log.info("创建订单：userId={}, orderData={}", userId, orderCreateDTO);
+        
+        // 创建订单记录
+        Orders orders = new Orders();
+        orders.setUserId(userId);
+        orders.setOrderNumber(userId.toString() + System.currentTimeMillis());
+        orders.setOrderStatus(com.example.constant.OrderStatus.WAIT_PAYMENT);
+        orders.setPaymentMethod(orderCreateDTO.getPaymentMethod());
+        orders.setTotalAmount(orderCreateDTO.getTotalAmount());
+        orders.setShippingAddress(orderCreateDTO.getShippingAddress());
+        orders.setReceiverName(orderCreateDTO.getReceiverName());
+        orders.setReceiverPhone(orderCreateDTO.getReceiverPhone());
+        orders.setCreateTime(java.time.LocalDateTime.now());
+        
+        // 保存订单
+        ordersMapper.pay(orders);
+        
+        // 从购物车中移除已结算的商品
+        for (com.example.mailuser.dto.OrderCreateDTO.OrderItemDTO item : orderCreateDTO.getItems()) {
+            // 这里可以调用购物车服务移除商品
+            // 暂时注释，后续可以实现
+            log.info("从购物车移除商品：productId={}, quantity={}", item.getProductId(), item.getQuantity());
+        }
+    }
+
+    @Override
+    public void cancelOrder(Long orderId) {
+        Long userId = BaseContext.getCurrentId();
+        log.info("取消订单：userId={}, orderId={}", userId, orderId);
+        
+        // 验证订单是否存在且属于当前用户
+        Orders order = ordersMapper.getOrderByIdAndUserId(orderId, userId);
+        if (order == null) {
+            throw new RuntimeException("订单不存在");
+        }
+        
+        // 只有待支付的订单可以取消
+        if (order.getOrderStatus() != OrderStatus.WAIT_PAYMENT) {
+            throw new RuntimeException("只能取消待支付的订单");
+        }
+        
+        // 更新订单状态为已取消
+        ordersMapper.updateOrderStatus(orderId, OrderStatus.CANCELLED);
+    }
+
+    @Override
+    public Orders getOrderDetail(Long orderId) {
+        Long userId = BaseContext.getCurrentId();
+        log.info("获取订单详情：userId={}, orderId={}", userId, orderId);
+        
+        // 验证订单是否存在且属于当前用户
+        Orders order = ordersMapper.getOrderByIdAndUserId(orderId, userId);
+        if (order == null) {
+            throw new RuntimeException("订单不存在");
+        }
+        
+        return order;
+    }
 
 }
 

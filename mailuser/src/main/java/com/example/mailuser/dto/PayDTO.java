@@ -10,6 +10,8 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @NoArgsConstructor
 public class PayDTO {
+   //订单ID
+   private Long orderId;
    //商品名称
    private String name;
    //商品总价
