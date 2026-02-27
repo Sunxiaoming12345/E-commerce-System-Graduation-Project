@@ -9,14 +9,22 @@ import com.example.mailadmin.entity.Products;
 import com.example.mailadmin.service.ProductsService;
 import com.example.result.PageResult;
 import com.example.result.Result;
+import io.minio.MinioClient;
+import io.minio.PutObjectArgs;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 
+import java.io.InputStream;
 import java.util.List;
+import java.util.UUID;
+
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import static com.example.result.Result.success;
 
@@ -27,6 +35,7 @@ import static com.example.result.Result.success;
  * @author sunxiaoming
  * @date 2026-01-31
  */
+@Slf4j
 @RestController
 @RequestMapping("/products/products")
 @Api(tags = "商品管理")
@@ -34,6 +43,15 @@ public class ProductsController
 {
     @Autowired
     private ProductsService productsService;
+    
+    @Autowired
+    private MinioClient minioClient;
+    
+    @Value("${minio.bucket.name}")
+    private String bucketName;
+    
+    @Value("${minio.url}")
+    private String endpoint;
 
     /**
      * 分页查询商品列表
@@ -139,6 +157,90 @@ public class ProductsController
         productsService.disable(ids);
         return Result.success();
     }
+    
+   /* *//**
+     * 上传商品图片
+     *//*
+    @PostMapping("/upload")
+    @ApiOperation(value = "上传商品图片", notes = "上传商品图片到Minio并返回图片URL")
+    public Result<String> upload(@ApiParam(name = "file", value = "商品图片文件", required = true) @RequestParam("file") MultipartFile file)
+    {
+        try {
+            // 生成唯一的文件名
+            String fileName = UUID.randomUUID().toString() + "-" + file.getOriginalFilename();
+            
+            // 上传文件到Minio
+            InputStream inputStream = file.getInputStream();
+            minioClient.putObject(
+                PutObjectArgs.builder()
+                    .bucket(bucketName)
+                    .object(fileName)
+                    .stream(inputStream, file.getSize(), -1)
+                    .contentType(file.getContentType())
+                    .build()
+            );
+            
+            // 生成访问URL
+            String imageUrl = endpoint + "/" + bucketName + "/" + fileName;
+            
+            return Result.success(imageUrl);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error("上传失败");
+        }*/
+@PostMapping("/upload")
+@ApiOperation(value = "上传商品图片", notes = "上传商品图片到Minio并返回图片URL")
+public Result<String> upload(@RequestParam("file") MultipartFile file) {
+    // 文件校验
+    if (file.isEmpty()) {
+        return Result.error("文件不能为空");
+    }
+
+    // 文件类型校验
+    String contentType = file.getContentType();
+    if (contentType == null || !contentType.startsWith("image/")) {
+        return Result.error("只支持图片文件上传");
+    }
+
+    // 文件大小限制（例如5MB）
+    if (file.getSize() > 5 * 1024 * 1024) {
+        return Result.error("文件大小不能超过5MB");
+    }
+
+    try {
+        String fileName = UUID.randomUUID().toString() +
+                getFileExtension(file.getOriginalFilename());
+
+        // 上传到Minio
+        minioClient.putObject(
+                PutObjectArgs.builder()
+                        .bucket(bucketName)
+                        .object(fileName)
+                        .stream(file.getInputStream(), file.getSize(), -1)
+                        .contentType(contentType)
+                        .build()
+        );
+
+        // 生成完整的访问URL
+        String imageUrl = String.format("%s/%s/%s",
+                endpoint.replaceFirst("//$", ""), bucketName, fileName);
+
+        return Result.success(imageUrl);
+    } catch (Exception e) {
+        log.error("图片上传失败", e);
+        return Result.error("上传失败: " + e.getMessage());
+    }
 }
+
+    // 辅助方法：获取文件扩展名
+    private String getFileExtension(String fileName) {
+        if (fileName == null || fileName.lastIndexOf(".") == -1) {
+            return "";
+        }
+        return fileName.substring(fileName.lastIndexOf("."));
+    }
+
+}
+
 
 

@@ -64,7 +64,17 @@
           <el-input-number v-model="form.stock" :min="0" />
         </el-form-item>
         <el-form-item label="主图" prop="imageUrl">
-          <el-input v-model="form.imageUrl" placeholder="图片 URL" />
+          <el-upload
+            class="avatar-uploader"
+            :http-request="uploadImage"
+            :show-file-list="false"
+            :before-upload="beforeUpload"
+            accept="image/*"
+          >
+            <img v-if="form.imageUrl" :src="form.imageUrl" class="avatar" />
+            <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
+          </el-upload>
+          <el-input v-model="form.imageUrl" placeholder="图片 URL" style="margin-top: 10px" />
         </el-form-item>
         <el-form-item label="描述" prop="description">
           <el-input v-model="form.description" type="textarea" rows="3" placeholder="商品描述" />
@@ -100,6 +110,8 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus } from '@element-plus/icons-vue'
+import request from '@/utils/request'
 import { getProductsPage, getProductById, addProduct, editProduct, removeProducts, updateStock, enableProducts, disableProducts } from '@/api/products'
 import { getCategoryList } from '@/api/categories'
 
@@ -231,6 +243,39 @@ async function handleRemove(row) {
   loadList()
 }
 
+async function uploadImage(options) {
+  const formData = new FormData()
+  formData.append('file', options.file)
+  
+  try {
+    const response = await request.post('/products/products/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    form.imageUrl = response
+    ElMessage.success('上传成功')
+    options.onSuccess(response)
+  } catch (error) {
+    ElMessage.error('上传失败')
+    options.onError(error)
+  }
+}
+
+function beforeUpload(file) {
+  const isImage = file.type.startsWith('image/')
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件')
+    return false
+  }
+  const isLt2M = file.size / 1024 / 1024 < 2
+  if (!isLt2M) {
+    ElMessage.error('图片大小不能超过2MB')
+    return false
+  }
+  return true
+}
+
 onMounted(() => {
   loadCategories()
   loadList()
@@ -248,5 +293,29 @@ onMounted(() => {
   margin-top: 16px;
   display: flex;
   justify-content: flex-end;
+}
+
+.avatar-uploader .avatar {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.avatar-uploader-icon {
+  width: 120px;
+  height: 120px;
+  line-height: 120px;
+  border: 1px dashed #d9d9d9;
+  border-radius: 4px;
+  text-align: center;
+  color: #999;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.avatar-uploader-icon:hover {
+  border-color: #409eff;
+  color: #409eff;
 }
 </style>
