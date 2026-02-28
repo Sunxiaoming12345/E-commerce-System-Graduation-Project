@@ -18,7 +18,9 @@
         <template #default="{ row }">¥ {{ formatMoney(row.totalAmount) }}</template>
       </el-table-column>
       <el-table-column prop="orderStatus" label="状态" width="90">
-        <template #default="{ row }">{{ orderStatusText(row.orderStatus) }}</template>
+        <template #default="{ row }">
+          <el-tag :type="getStatusType(row.orderStatus)">{{ orderStatusText(row.orderStatus) }}</el-tag>
+        </template>
       </el-table-column>
       <el-table-column prop="receiverName" label="收货人" width="100" />
       <el-table-column prop="receiverPhone" label="电话" width="120" />
@@ -46,7 +48,9 @@
       <template v-if="orderDetail.order">
         <el-descriptions :column="2" border>
           <el-descriptions-item label="订单号">{{ orderDetail.order.orderNumber }}</el-descriptions-item>
-          <el-descriptions-item label="状态">{{ orderStatusText(orderDetail.order.orderStatus) }}</el-descriptions-item>
+          <el-descriptions-item label="状态">
+            <el-tag :type="getStatusType(orderDetail.order.orderStatus)">{{ orderStatusText(orderDetail.order.orderStatus) }}</el-tag>
+          </el-descriptions-item>
           <el-descriptions-item label="金额">¥ {{ formatMoney(orderDetail.order.totalAmount) }}</el-descriptions-item>
           <el-descriptions-item label="收货人">{{ orderDetail.order.receiverName }} {{ orderDetail.order.receiverPhone }}</el-descriptions-item>
           <el-descriptions-item label="地址" :span="2">{{ orderDetail.order.shippingAddress }}</el-descriptions-item>
@@ -107,9 +111,26 @@ const statusVisible = ref(false)
 const currentOrder = ref(null)
 const statusForm = reactive({ orderId: null, orderStatus: null, remark: '' })
 
-const statusMap = { 0: '待付款', 1: '已付款', 2: '待发货', 3: '已发货', 4: '已完成', 5: '已取消' }
+const statusMap = { 0: '待付款', 1: '已付款', 2: '已发货', 3: '已完成', 4: '已取消' }
 function orderStatusText(s) {
   return statusMap[s] ?? '-'
+}
+
+function getStatusType(status) {
+  switch (status) {
+    case 0:
+      return 'warning'
+    case 1:
+      return 'success'
+    case 2:
+      return 'info'
+    case 3:
+      return 'success'
+    case 4:
+      return 'danger'
+    default:
+      return ''
+  }
 }
 
 function formatMoney(v) {

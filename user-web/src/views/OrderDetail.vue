@@ -152,8 +152,6 @@ const getStatusType = (status) => {
       return 'success'
     case 4:
       return 'danger'
-    case 5:
-      return 'danger'
     default:
       return ''
   }
@@ -166,12 +164,10 @@ const getStatusText = (status) => {
     case 1:
       return '已付款'
     case 2:
-      return '待发货'
-    case 3:
       return '已发货'
-    case 4:
+    case 3:
       return '已完成'
-    case 5:
+    case 4:
       return '已取消'
     default:
       return status
