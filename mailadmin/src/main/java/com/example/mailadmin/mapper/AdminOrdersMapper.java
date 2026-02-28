@@ -38,9 +38,6 @@ public interface AdminOrdersMapper {
     //获取已支付订单数
     Integer getPaidCount();
 
-    //获取待发货订单数
-    Integer getPendingShipmentCount();
-
     //获取已发货订单数
     Integer getShippedCount();
 

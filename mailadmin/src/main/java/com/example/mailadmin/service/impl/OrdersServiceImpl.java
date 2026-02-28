@@ -61,8 +61,6 @@ public class OrdersServiceImpl implements OrdersService {
         orderStatisticsVO.setPendingPaymentCount(adminOrdersMapper.getPendingPaymentCount());
         // 获取已支付订单数
         orderStatisticsVO.setPaidCount(adminOrdersMapper.getPaidCount());
-        // 获取待发货订单数
-        orderStatisticsVO.setPendingShipmentCount(adminOrdersMapper.getPendingShipmentCount());
         // 获取已发货订单数
         orderStatisticsVO.setShippedCount(adminOrdersMapper.getShippedCount());
         // 获取已完成订单数

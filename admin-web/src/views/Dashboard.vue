@@ -22,8 +22,8 @@
       </el-col>
       <el-col :span="6">
         <div class="stat-card">
-          <div class="stat-label">待发货</div>
-          <div class="stat-value">{{ stats.pendingShipmentCount ?? '-' }}</div>
+          <div class="stat-label">已发货</div>
+          <div class="stat-value">{{ stats.shippedCount ?? '-' }}</div>
         </div>
       </el-col>
     </el-row>

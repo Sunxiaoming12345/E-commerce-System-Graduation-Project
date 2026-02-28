@@ -57,39 +57,34 @@
         select count(*) from orders where order_status = 1
     </select>
 
-    <!-- 获取待发货订单数 -->
-    <select id="getPendingShipmentCount" resultType="java.lang.Integer">
-        select count(*) from orders where order_status = 2
-    </select>
-
     <!-- 获取已发货订单数 -->
     <select id="getShippedCount" resultType="java.lang.Integer">
-        select count(*) from orders where order_status = 3
+        select count(*) from orders where order_status = 2
     </select>
 
     <!-- 获取已完成订单数 -->
     <select id="getCompletedCount" resultType="java.lang.Integer">
-        select count(*) from orders where order_status = 4
+        select count(*) from orders where order_status = 3
     </select>
 
     <!-- 获取已取消订单数 -->
     <select id="getCancelledCount" resultType="java.lang.Integer">
-        select count(*) from orders where order_status = 5
+        select count(*) from orders where order_status = 4
     </select>
 
     <!-- 获取总销售额 -->
     <select id="getTotalSales" resultType="java.math.BigDecimal">
-        select COALESCE(sum(total_amount), 0) from orders where order_status in (1, 2, 3, 4)
+        select COALESCE(sum(total_amount), 0) from orders where order_status in (1, 2, 3)
     </select>
 
     <!-- 获取今日销售额 -->
     <select id="getTodaySales" resultType="java.math.BigDecimal">
-        select COALESCE(sum(total_amount), 0) from orders where order_status in (1, 2, 3, 4) and date(create_time) = current_date
+        select COALESCE(sum(total_amount), 0) from orders where order_status in (1, 2, 3) and date(create_time) = current_date
     </select>
 
     <!-- 获取本月销售额 -->
     <select id="getMonthSales" resultType="java.math.BigDecimal">
-        select COALESCE(sum(total_amount), 0) from orders where order_status in (1, 2, 3, 4) and date_format(create_time, '%Y-%m') = date_format(current_date, '%Y-%m')
+        select COALESCE(sum(total_amount), 0) from orders where order_status in (1, 2, 3) and date_format(create_time, '%Y-%m') = date_format(current_date, '%Y-%m')
     </select>
 
 </mapper>
