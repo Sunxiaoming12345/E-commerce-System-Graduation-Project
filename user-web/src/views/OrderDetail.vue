@@ -109,6 +109,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getOrderDetail, payOrder, cancelOrder } from '@/api/orders'
+import { getProductDetail } from '@/api/products'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()

@@ -27,6 +27,9 @@ public interface UserOrdersMapper {
     // 根据订单ID和用户ID查询订单
     Orders getOrderByIdAndUserId(@Param("orderId") Long orderId, @Param("userId") Long userId);
 
+    // 根据订单ID查询订单
+    Orders getOrderById(@Param("orderId") Long orderId);
+
     // 更新订单状态
     void updateOrderStatus(@Param("orderId") Long orderId, @Param("orderStatus") Integer orderStatus);
 

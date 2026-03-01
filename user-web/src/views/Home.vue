@@ -15,7 +15,7 @@
           <div class="product-info">
             <h3 class="product-name">{{ product.name }}</h3>
             <p class="product-price">¥{{ product.price }}</p>
-            <p class="product-stock" v-if="product.stock > 0">库存: {{ product.stock }}</p>
+            <p class="product-stock" v-if="product.stock > 0">库存充足</p>
             <p class="product-stock out-of-stock" v-else>缺货</p>
           </div>
         </router-link>

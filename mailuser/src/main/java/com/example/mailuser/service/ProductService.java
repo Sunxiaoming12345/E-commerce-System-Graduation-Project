@@ -41,4 +41,9 @@ public interface ProductService {
      * @return 商品详情
      */
     ProductVO getProductById(Long id);
+
+    /**
+     * 清除推荐商品缓存
+     */
+    void clearRecommendedProductsCache();
 }

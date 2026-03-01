@@ -33,7 +33,7 @@ public class ProductController {
      * @return 推荐商品列表
      */
     @GetMapping("/recommended")
-    @ApiOperation(value = "获取推荐商品列表", notes = "获取最新上架的10个商品作为推荐商品")
+    @ApiOperation(value = "获取推荐商品列表", notes = "获取所有上架商品作为推荐商品")
 
     public Result<List<ProductVO>> getRecommendedProducts() {
         List<ProductVO> recommendedProducts = productService.getRecommendedProducts();

@@ -1,11 +1,13 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { getUserInfo, updateUserInfo } from '@/api/auth'
 
 export const useUserStore = defineStore('user', () => {
   const token = ref(localStorage.getItem('user_token') || '')
   const username = ref(localStorage.getItem('user_username') || '')
   const userInfo = ref(null)
+
+  const isLoggedIn = computed(() => !!token.value)
 
   function setToken(t) {
     token.value = t
@@ -45,5 +47,5 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  return { token, username, userInfo, setToken, setUsername, logout, fetchUserInfo, updateInfo }
+  return { token, username, userInfo, isLoggedIn, setToken, setUsername, logout, fetchUserInfo, updateInfo }
 })

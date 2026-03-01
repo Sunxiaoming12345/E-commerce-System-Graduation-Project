@@ -21,7 +21,6 @@
             status = 1
         ORDER BY
             create_time DESC
-        LIMIT 10
     </select>
 
     <!-- 获取所有分类 -->

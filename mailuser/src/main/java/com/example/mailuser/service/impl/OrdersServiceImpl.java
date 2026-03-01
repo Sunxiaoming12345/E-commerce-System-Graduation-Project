@@ -22,6 +22,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import com.example.constant.RabbitMQConstant;
 @Slf4j
 @Service
 public class OrdersServiceImpl implements OrdersService {
@@ -63,6 +67,9 @@ public class OrdersServiceImpl implements OrdersService {
 
     @Autowired
     private BalanceService balanceService;
+
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
 
     // 支付
     @Override
@@ -131,9 +138,14 @@ public class OrdersServiceImpl implements OrdersService {
                 throw new RuntimeException("商品库存不足");
             }
             // 减少库存
-            int newStock = productVO.getStock() - item.getQuantity();
+            int oldStock = productVO.getStock();
+            int newStock = oldStock - item.getQuantity();
             productMapper.updateStock(item.getProductId(), newStock);
-            log.info("减少商品库存：productId={}, 原库存={}, 减少数量={}, 新库存={}", item.getProductId(), productVO.getStock(), item.getQuantity(), newStock);
+            log.info("减少商品库存：productId={}, 原库存={}, 减少数量={}, 新库存={}", item.getProductId(), oldStock, item.getQuantity(), newStock);
+            // 只有当库存从有到0时才发送消息
+            if (oldStock > 0 && newStock == 0) {
+                sendStockUpdateMessage(item.getProductId(), newStock);
+            }
         }
         
         // 创建订单记录
@@ -166,7 +178,23 @@ public class OrdersServiceImpl implements OrdersService {
             // 暂时注释，后续可以实现
             log.info("从购物车移除商品：productId={}, quantity={}", item.getProductId(), item.getQuantity());
         }
-        
+
+
+        // 发送延迟消息，10分钟后检查订单是否支付
+        long delayTime =  10 * 1000; // 10分钟
+        Map<String, Object> message = new HashMap<>();
+        message.put("orderId", orders.getOrderId());
+        rabbitTemplate.convertAndSend(
+                RabbitMQConstant.DELAY_EXCHANGE_NAME,
+                RabbitMQConstant.DELAY_ROUTING_KEY,
+                message,
+                msg -> {
+                    msg.getMessageProperties().setHeader("x-delay", delayTime);
+                    return msg;
+                }
+        );
+        log.info("发送订单延迟消息：orderId={}, delayTime={}ms", orders.getOrderId(), delayTime);
+
         return orders.getOrderId();
     }
 
@@ -195,9 +223,14 @@ public class OrdersServiceImpl implements OrdersService {
             com.example.mailuser.vo.ProductVO productVO = productMapper.getProductById(item.getProductId());
             if (productVO != null) {
                 // 增加库存
-                int newStock = productVO.getStock() + item.getQuantity();
+                int oldStock = productVO.getStock();
+                int newStock = oldStock + item.getQuantity();
                 productMapper.updateStock(item.getProductId(), newStock);
-                log.info("恢复商品库存：productId={}, 原库存={}, 增加数量={}, 新库存={}", item.getProductId(), productVO.getStock(), item.getQuantity(), newStock);
+                log.info("恢复商品库存：productId={}, 原库存={}, 增加数量={}, 新库存={}", item.getProductId(), oldStock, item.getQuantity(), newStock);
+                // 只有当库存从0到有时才发送消息
+                if (oldStock == 0 && newStock > 0) {
+                    sendStockUpdateMessage(item.getProductId(), newStock);
+                }
             }
         }
         
@@ -219,12 +252,43 @@ public class OrdersServiceImpl implements OrdersService {
         // 查询订单项列表
         java.util.List<com.example.mailadmin.entity.OrderItems> orderItems = ordersMapper.selectOrderItemsByOrderId(orderId);
         
+        // 创建包含图片URL的订单项VO列表
+        java.util.List<com.example.mailuser.vo.OrderItemVO> orderItemVOs = new java.util.ArrayList<>();
+        for (com.example.mailadmin.entity.OrderItems item : orderItems) {
+            com.example.mailuser.vo.OrderItemVO orderItemVO = new com.example.mailuser.vo.OrderItemVO();
+            orderItemVO.setItemId(item.getItemId());
+            orderItemVO.setOrderId(item.getOrderId());
+            orderItemVO.setProductId(item.getProductId());
+            orderItemVO.setProductName(item.getProductName());
+            orderItemVO.setProductPrice(item.getProductPrice());
+            orderItemVO.setQuantity(item.getQuantity());
+            orderItemVO.setSubtotal(item.getSubtotal());
+            
+            // 获取商品详情并添加图片URL
+            com.example.mailuser.vo.ProductVO productVO = productMapper.getProductById(item.getProductId());
+            if (productVO != null) {
+                orderItemVO.setImageUrl(productVO.getImageUrl());
+            }
+            
+            orderItemVOs.add(orderItemVO);
+        }
+        
         // 封装订单详情VO
         com.example.mailuser.vo.OrderDetailVO orderDetailVO = new com.example.mailuser.vo.OrderDetailVO();
         orderDetailVO.setOrder(order);
-        orderDetailVO.setOrderItems(orderItems);
+        orderDetailVO.setOrderItems(orderItemVOs);
         
         return orderDetailVO;
+    }
+
+    // 发送库存更新消息到RabbitMQ
+    private void sendStockUpdateMessage(Long productId, Integer stock) {
+        try {
+            String message = "Product " + productId + " stock updated to " + stock;
+            rabbitTemplate.convertAndSend(RabbitMQConstant.STOCK_EXCHANGE_NAME, RabbitMQConstant.STOCK_ROUTING_KEY, message);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
 }

@@ -38,7 +38,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getProductDetail } from '@/api/products'
-import { addToCart } from '@/api/cart'
+import { addToCart, getCartList } from '@/api/cart'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()
@@ -63,10 +63,26 @@ const loadProductDetail = async () => {
 
 const handleAddToCart = async () => {
   try {
+    // 获取购物车列表
+    const cartList = await getCartList()
+    // 查找购物车中该商品的数量
+    const existingItem = cartList.find(item => item.productId === product.value.id)
+    const existingQuantity = existingItem ? existingItem.quantity : 0
+    // 检查库存是否足够
+    if (existingQuantity + quantity.value > product.value.stock) {
+      ElMessage.warning('购物车中已有该商品，加上本次添加的数量超过库存')
+      return
+    }
+    // 添加到购物车
     await addToCart({ productId: product.value.id, quantity: quantity.value })
     ElMessage.success('已加入购物车')
   } catch (error) {
-    ElMessage.error('加入购物车失败')
+    // 捕获后端返回的库存不足错误
+    if (error.response && error.response.data && error.response.data.msg === '商品库存不足') {
+      ElMessage.warning('库存不足，无法添加到购物车')
+    } else {
+      ElMessage.error('加入购物车失败')
+    }
   }
 }
 
@@ -80,8 +96,9 @@ const handleBuyNow = () => {
     imageUrl: product.value.imageUrl
   }
   
-  // 存储到本地存储
+  // 存储到本地存储，添加直接购买标记
   localStorage.setItem('selectedCartItems', JSON.stringify([orderItem]))
+  localStorage.setItem('isDirectPurchase', 'true')
   
   // 直接跳转到订单确认页面
   router.push('/order-confirm')

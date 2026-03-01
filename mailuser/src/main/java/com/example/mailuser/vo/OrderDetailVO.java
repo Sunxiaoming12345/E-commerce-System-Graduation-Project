@@ -1,7 +1,6 @@
 package com.example.mailuser.vo;
 
 import com.example.mailuser.entity.Orders;
-import com.example.mailadmin.entity.OrderItems;
 import lombok.Data;
 
 import java.util.List;
@@ -22,5 +21,5 @@ public class OrderDetailVO {
     /**
      * 订单项列表
      */
-    private List<OrderItems> orderItems;
+    private List<OrderItemVO> orderItems;
 }

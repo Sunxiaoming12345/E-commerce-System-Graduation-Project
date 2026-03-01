@@ -219,13 +219,19 @@ const submitOrder = async () => {
     const res = await createOrder(orderData)
     currentOrderId.value = res
     
-    // 从购物车中移除已结算的商品
-    for (const item of orderItems.value) {
-      await removeCartItem(item.productId)
+    // 检查是否是直接购买
+    const isDirectPurchase = localStorage.getItem('isDirectPurchase') === 'true'
+    
+    // 如果不是直接购买，则从购物车中移除已结算的商品
+    if (!isDirectPurchase) {
+      for (const item of orderItems.value) {
+        await removeCartItem(item.productId)
+      }
     }
     
-    // 清除本地存储的选中商品
+    // 清除本地存储的选中商品和直接购买标记
     localStorage.removeItem('selectedCartItems')
+    localStorage.removeItem('isDirectPurchase')
     
     // 如果是余额支付，显示确认弹窗
     if (form.value.paymentMethod === '2') {

@@ -12,13 +12,26 @@
                 <div class="cart-item-details">
                   <router-link :to="`/product/${scope.row.productId}`" class="cart-item-name">{{ scope.row.productName }}</router-link>
                   <p class="cart-item-price">¥{{ scope.row.price }}</p>
+                  <p v-if="scope.row.stock <= 0" class="cart-item-out-of-stock">缺货（当前库存：{{ scope.row.stock }}）</p>
+                  <p v-else-if="scope.row.stock < scope.row.quantity" class="cart-item-out-of-stock">缺货（当前库存：{{ scope.row.stock }}）</p>
+                  <p v-else-if="scope.row.stock == scope.row.quantity" class="cart-item-out-of-stock">库存紧张（当前库存：{{ scope.row.stock }}）</p>
                 </div>
               </div>
             </template>
           </el-table-column>
           <el-table-column label="数量" width="180">
             <template #default="scope">
-                <el-input-number v-model="scope.row.quantity" :min="0" :max="scope.row.stock" @change="handleUpdateCartItem(scope.row)" />
+                <div class="quantity-container">
+                  <el-input-number 
+                    v-model="scope.row.quantity" 
+                    :min="0" 
+                    :max="scope.row.quantity >= scope.row.stock ? scope.row.quantity : 99999" 
+                    @change="(value) => {
+                      handleQuantityChange(value, scope.row);
+                      handleUpdateCartItem(scope.row);
+                    }"
+                  />
+                </div>
             </template>
           </el-table-column>
           <el-table-column label="小计" width="120">
@@ -70,6 +83,7 @@ const loadCartList = async () => {
   try {
     loading.value = true
     const res = await getCartList()
+    // 保存原始购物车数量，不被库存影响
     cartItems.value = res
   } catch (error) {
     console.error('Failed to load cart list:', error)
@@ -85,6 +99,14 @@ const selectedTotalPrice = computed(() => {
   }, 0)
 })
 
+// 保存原始数量
+const originalQuantities = ref({})
+
+// 监听数量变化，在变化前保存原始值
+const handleQuantityChange = (value, item) => {
+  originalQuantities.value[item.productId] = item.quantity
+}
+
 const handleUpdateCartItem = async (item) => {
   try {
     if (item.quantity === 0) {
@@ -93,11 +115,25 @@ const handleUpdateCartItem = async (item) => {
       ElMessage.success('商品已从购物车移除')
       loadCartList()
     } else {
+      // 获取原始数量
+      const originalQuantity = originalQuantities.value[item.productId] || item.quantity
+      // 只有当增加数量时才检查库存
+      if (item.quantity > originalQuantity && item.quantity > item.stock) {
+        ElMessage.warning('库存不足，无法增加数量')
+        // 恢复之前的数量
+        loadCartList()
+        return
+      }
       // 正常更新数量
       await updateCartItem({ productId: item.productId, quantity: item.quantity })
     }
   } catch (error) {
-    ElMessage.error('更新购物车失败')
+    // 捕获后端返回的库存不足错误
+    if (error.response && error.response.data && error.response.data.msg === '商品库存不足') {
+      ElMessage.warning('库存不足，无法增加数量')
+    } else {
+      ElMessage.error('更新购物车失败')
+    }
     // 恢复之前的数量
     loadCartList()
   }
@@ -130,6 +166,13 @@ const handleClearCart = async () => {
 const handleCheckout = () => {
   if (selectedItems.value.length === 0) {
     ElMessage.warning('请选择要结算的商品')
+    return
+  }
+  
+  // 检查选中的商品是否缺货
+  const outOfStockItems = selectedItems.value.filter(item => item.stock <= 0 || item.stock < item.quantity)
+  if (outOfStockItems.length > 0) {
+    ElMessage.warning('选中的商品中有缺货商品，无法结算')
     return
   }
   
@@ -199,6 +242,12 @@ onMounted(() => {
   font-size: 14px;
   color: #666;
   margin: 0;
+}
+
+.cart-item-out-of-stock {
+  font-size: 12px;
+  color: #ff4d4f;
+  margin: 4px 0 0 0;
 }
 
 .cart-item-subtotal {

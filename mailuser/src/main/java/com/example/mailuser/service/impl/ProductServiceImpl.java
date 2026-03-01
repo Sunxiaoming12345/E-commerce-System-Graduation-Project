@@ -1,14 +1,17 @@
 package com.example.mailuser.service.impl;
 
+import com.alibaba.fastjson.JSON;
 import com.example.mailuser.mapper.ProductMapper;
 import com.example.mailuser.service.ProductService;
 import com.example.mailuser.vo.CategoryVO;
 import com.example.mailuser.vo.ProductVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 商品服务实现类
@@ -23,6 +26,13 @@ public class ProductServiceImpl implements ProductService {
     @Autowired
     private ProductMapper productMapper;
 
+    @Autowired
+    private RedisTemplate<String, String> redisTemplate;
+
+    private static final String CATEGORIES_CACHE_KEY = "categories:all";
+    private static final String RECOMMENDED_PRODUCTS_CACHE_KEY = "products:recommended";
+    private static final long CACHE_EXPIRE_TIME = 3600; // 缓存过期时间，单位：秒
+
     /**
      * 获取推荐商品列表
      *
@@ -30,9 +40,43 @@ public class ProductServiceImpl implements ProductService {
      */
     @Override
     public List<ProductVO> getRecommendedProducts() {
+        // 尝试从Redis缓存中获取推荐商品数据
+        try {
+            String productsJson = redisTemplate.opsForValue().get(RECOMMENDED_PRODUCTS_CACHE_KEY);
+            if (productsJson != null) {
+                log.info("从Redis缓存中获取推荐商品数据");
+                return JSON.parseArray(productsJson, ProductVO.class);
+            }
+        } catch (Exception e) {
+            log.error("Redis缓存读取失败：{}", e.getMessage());
+        }
+
+        // 从数据库中获取推荐商品数据
         List<ProductVO> recommendedProducts = productMapper.getRecommendedProducts();
-        log.info("获取推荐商品列表，数量：{}", recommendedProducts.size());
+        log.info("从数据库中获取推荐商品列表，数量：{}", recommendedProducts.size());
+
+        // 将推荐商品数据存入Redis缓存
+        try {
+            String productsJson = JSON.toJSONString(recommendedProducts);
+            redisTemplate.opsForValue().set(RECOMMENDED_PRODUCTS_CACHE_KEY, productsJson, CACHE_EXPIRE_TIME, TimeUnit.SECONDS);
+            log.info("推荐商品数据已存入Redis缓存，过期时间：{}秒", CACHE_EXPIRE_TIME);
+        } catch (Exception e) {
+            log.error("Redis缓存写入失败：{}", e.getMessage());
+        }
+
         return recommendedProducts;
+    }
+
+    /**
+     * 清除推荐商品缓存
+     */
+    public void clearRecommendedProductsCache() {
+        try {
+            redisTemplate.delete(RECOMMENDED_PRODUCTS_CACHE_KEY);
+            log.info("推荐商品缓存已清除");
+        } catch (Exception e) {
+            log.error("清除推荐商品缓存失败：{}", e.getMessage());
+        }
     }
 
     /**
@@ -42,8 +86,30 @@ public class ProductServiceImpl implements ProductService {
      */
     @Override
     public List<CategoryVO> getAllCategories() {
+        // 尝试从Redis缓存中获取分类数据
+        try {
+            String categoriesJson = redisTemplate.opsForValue().get(CATEGORIES_CACHE_KEY);
+            if (categoriesJson != null) {
+                log.info("从Redis缓存中获取分类数据");
+                return JSON.parseArray(categoriesJson, CategoryVO.class);
+            }
+        } catch (Exception e) {
+            log.error("Redis缓存读取失败：{}", e.getMessage());
+        }
+
+        // 从数据库中获取分类数据
         List<CategoryVO> categories = productMapper.getAllCategories();
-        log.info("获取所有分类，数量：{}", categories.size());
+        log.info("从数据库中获取所有分类，数量：{}", categories.size());
+
+        // 将分类数据存入Redis缓存
+        try {
+            String categoriesJson = JSON.toJSONString(categories);
+            redisTemplate.opsForValue().set(CATEGORIES_CACHE_KEY, categoriesJson, CACHE_EXPIRE_TIME, TimeUnit.SECONDS);
+            log.info("分类数据已存入Redis缓存，过期时间：{}秒", CACHE_EXPIRE_TIME);
+        } catch (Exception e) {
+            log.error("Redis缓存写入失败：{}", e.getMessage());
+        }
+
         return categories;
     }
 
