@@ -41,4 +41,7 @@ public interface UserOrdersMapper {
     
     // 根据订单ID查询订单项列表
     java.util.List<com.example.mailadmin.entity.OrderItems> selectOrderItemsByOrderId(@Param("orderId") Long orderId);
+    
+    // 根据订单号查询订单
+    Orders selectByOrderNumber(@Param("orderNumber") String orderNumber);
 }

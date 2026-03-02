@@ -3,17 +3,19 @@
 <mapper namespace="com.example.mailadmin.mapper.PaymentMapper">
 
     <!-- 支付记录分页查询 -->
-    <select id="pageQuery" resultType="com.example.mailadmin.entity.Payments">
-        select * from payments
+    <select id="pageQuery" resultType="com.example.mailadmin.vo.PaymentVO">
+        select p.*, o.order_number as orderNumber 
+        from payments p
+        left join orders o on p.order_id = o.order_id
         <where>
             <if test="orderId != null">
-                and order_id = #{orderId}
+                and p.order_id = #{orderId}
             </if>
             <if test="status != null">
-                and status = #{status}
+                and p.status = #{status}
             </if>
             <if test="paymentMethod != null">
-                and payment_method = #{paymentMethod}
+                and p.payment_method = #{paymentMethod}
             </if>
         </where>
     </select>
@@ -69,6 +71,11 @@
     <!-- 获取失败支付订单数 -->
     <select id="getFailedPaymentCount" resultType="java.lang.Integer">
         select count(*) from payments where status = 2
+    </select>
+
+    <!-- 根据订单ID查询支付记录 -->
+    <select id="getByOrderId" parameterType="java.lang.Long" resultType="com.example.mailadmin.entity.Payments">
+        select * from payments where order_id = #{orderId}
     </select>
 
 </mapper>

@@ -1,10 +1,13 @@
 package com.example.mailuser.listener;
 
-import com.example.constant.OrderStatus;
-import com.example.constant.RabbitMQConstant;
 import com.example.mailuser.entity.Orders;
 import com.example.mailuser.mapper.ProductMapper;
 import com.example.mailuser.mapper.UserOrdersMapper;
+import com.example.mailuser.vo.ProductVO;
+import com.example.constant.OrderStatus;
+import com.example.constant.RabbitMQConstant;
+import com.example.mailuser.mapper.UserPaymentMapper;
+import com.example.mailadmin.entity.Payments;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -22,6 +25,9 @@ public class OrderDelayMessageConsumer {
 
     @Autowired
     private ProductMapper productMapper;
+
+    @Autowired
+    private UserPaymentMapper userPaymentMapper;
 
     @Autowired
     private RabbitTemplate rabbitTemplate;
@@ -84,6 +90,13 @@ public class OrderDelayMessageConsumer {
 
             // 更新订单状态为已取消
             ordersMapper.updateOrderStatus(orderId, OrderStatus.CANCELLED);
+            
+            // 更新支付记录状态为已取消
+            Payments payment = userPaymentMapper.getByOrderId(orderId);
+            if (payment != null) {
+                userPaymentMapper.updateStatus(payment.getPaymentId(), 2); // 2-已取消
+                log.info("支付记录已取消：paymentId={}, orderId={}", payment.getPaymentId(), orderId);
+            }
             log.info("订单已取消: {}", orderId);
         } catch (Exception e) {
             log.error("取消订单失败: {}", orderId, e);

@@ -78,6 +78,12 @@
               <el-radio label="1">微信支付</el-radio>
             </el-radio-group>
           </div>
+          <div class="countdown-section">
+            <span class="countdown-label">支付剩余时间：</span>
+            <span class="countdown-time" :class="{ 'warning': countdownSeconds < 15, 'danger': countdownSeconds < 5 }">
+              {{ formatCountdown(countdownSeconds) }}
+            </span>
+          </div>
         </div>
 
         <!-- 订单金额 -->
@@ -119,6 +125,10 @@ const order = ref(null)
 const loading = ref(true)
 const paymentMethod = ref('2') // 默认余额支付
 
+// 倒计时相关
+const countdownSeconds = ref(30) // 30秒，与后端延迟消息时间一致
+const countdownTimer = ref(null)
+
 const loadOrderDetail = async () => {
   try {
     loading.value = true
@@ -132,6 +142,14 @@ const loadOrderDetail = async () => {
         console.log('First order item:', res.orderItems[0])
         console.log('First order item keys:', Object.keys(res.orderItems[0]))
       }
+    }
+    
+    // 如果订单状态是待付款，开始倒计时
+    if (res.order.orderStatus === 0) {
+      startCountdown()
+    } else {
+      // 清除倒计时
+      clearCountdown()
     }
   } catch (error) {
     console.error('Failed to load order detail:', error)
@@ -188,25 +206,91 @@ const getPaymentMethodText = (method) => {
   }
 }
 
+// 格式化倒计时显示
+const formatCountdown = (seconds) => {
+  const minutes = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+}
+
+// 开始倒计时
+const startCountdown = () => {
+  // 重置倒计时为30秒，与后端延迟消息时间一致
+  countdownSeconds.value = 30
+  
+  // 清除之前的定时器
+  if (countdownTimer.value) {
+    clearInterval(countdownTimer.value)
+  }
+  
+  // 开始倒计时
+  countdownTimer.value = setInterval(() => {
+    if (countdownSeconds.value > 0) {
+      countdownSeconds.value--
+    } else {
+      // 倒计时结束
+      clearCountdown()
+      ElMessage.warning('订单支付超时，已自动取消')
+      router.push('/orders')
+    }
+  }, 1000)
+}
+
+// 清除倒计时
+const clearCountdown = () => {
+  if (countdownTimer.value) {
+    clearInterval(countdownTimer.value)
+    countdownTimer.value = null
+  }
+}
+
 const handlePayOrder = async (id, method) => {
   try {
+    // 先从后端获取最新的订单状态
+    const latestOrder = await getOrderDetail(id)
+    
+    // 检查订单状态
+    if (latestOrder.order.orderStatus !== 0) {
+      ElMessage.warning('订单状态已发生改变，无法支付')
+      router.push('/orders')
+      return
+    }
+    
+    // 执行支付操作
     await payOrder({ 
       orderId: id, 
       paymentMethod: parseInt(method) 
     })
     ElMessage.success('支付成功')
+    // 清除倒计时
+    clearCountdown()
     loadOrderDetail()
   } catch (error) {
+    console.error('支付失败:', error)
     ElMessage.error('支付失败')
   }
 }
 
 const handleCancelOrder = async (id) => {
   try {
+    // 先从后端获取最新的订单状态
+    const latestOrder = await getOrderDetail(id)
+    
+    // 检查订单状态
+    if (latestOrder.order.orderStatus !== 0) {
+      ElMessage.warning('订单状态已发生改变，无法取消')
+      router.push('/orders')
+      return
+    }
+    
+    // 执行取消操作
     await cancelOrder(id)
     ElMessage.success('订单已取消')
+    // 清除倒计时
+    clearCountdown()
     loadOrderDetail()
   } catch (error) {
+    console.error('取消订单失败:', error)
     ElMessage.error('取消订单失败')
   }
 }
@@ -356,5 +440,45 @@ onMounted(() => {
 .product-item .subtotal-column {
   font-size: 14px;
   color: #333;
+}
+
+/* 倒计时样式 */
+.countdown-section {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #eaeaea;
+}
+
+.countdown-label {
+  font-size: 14px;
+  color: #666;
+  margin-right: 10px;
+}
+
+.countdown-time {
+  font-weight: bold;
+  color: #1890ff;
+  font-size: 18px;
+}
+
+.countdown-time.warning {
+  color: #faad14;
+}
+
+.countdown-time.danger {
+  color: #ff4d4f;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 </style>

@@ -1,67 +1,55 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.example.mailuser.mapper.UserOrdersMapper">
-
-    <select id="PageQuery" resultType="com.example.mailuser.entity.Orders">
-        select * from orders
-        <where>
-            <if test="userId != null">
-                and user_id = #{userId}
-            </if>
-            <if test="orderStatus != null">
-                and order_status = #{orderStatus}
-            </if>
-            <if test="name != null">
-                and name like concat('%',#{name},'%')
-            </if>
-        </where>
-        order by create_time desc
+    
+    <!-- 分页查询订单 -->
+    <select id="PageQuery" parameterType="com.example.mailuser.dto.MyOrdersPageQueryDTO" resultType="com.example.mailuser.entity.Orders">
+        SELECT * FROM orders
+        WHERE user_id = #{userId}
+        ORDER BY create_time DESC
     </select>
-
-    <select id="getOrderByIdAndUserId" resultType="com.example.mailuser.entity.Orders">
-        select * from orders
-        where order_id = #{orderId} and user_id = #{userId}
+    
+    <!-- 根据订单ID和用户ID查询订单 -->
+    <select id="getOrderByIdAndUserId" parameterType="java.util.Map" resultType="com.example.mailuser.entity.Orders">
+        SELECT * FROM orders
+        WHERE order_id = #{orderId} AND user_id = #{userId}
     </select>
-
-    <select id="getOrderById" resultType="com.example.mailuser.entity.Orders">
-        select * from orders
-        where order_id = #{orderId}
+    
+    <!-- 根据订单ID查询订单 -->
+    <select id="getOrderById" parameterType="java.lang.Long" resultType="com.example.mailuser.entity.Orders">
+        SELECT * FROM orders
+        WHERE order_id = #{orderId}
     </select>
-
-    <update id="updateOrderStatus">
-        update orders
-        set order_status = #{orderStatus}, update_time = CURRENT_TIMESTAMP
-        where order_id = #{orderId}
+    
+    <!-- 更新订单状态 -->
+    <update id="updateOrderStatus" parameterType="java.util.Map">
+        UPDATE orders
+        SET order_status = #{orderStatus}
+        WHERE order_id = #{orderId}
     </update>
-
-    <update id="updateOrderForPayment">
-        update orders
-        set order_status = #{orderStatus}, 
-            payment_method = #{paymentMethod}, 
-            pay_time = CURRENT_TIMESTAMP, 
-            update_time = CURRENT_TIMESTAMP
-        where order_id = #{orderId}
+    
+    <!-- 更新订单支付信息 -->
+    <update id="updateOrderForPayment" parameterType="java.util.Map">
+        UPDATE orders
+        SET order_status = #{orderStatus}, payment_method = #{paymentMethod}, pay_time = NOW()
+        WHERE order_id = #{orderId}
     </update>
     
     <!-- 保存订单项 -->
-    <insert id="saveOrderItem">
-        insert into order_items (order_id, product_id, product_name, product_price, quantity, subtotal) 
-        values (#{orderId}, #{productId}, #{productName}, #{productPrice}, #{quantity}, #{subtotal})
+    <insert id="saveOrderItem" parameterType="java.util.Map">
+        INSERT INTO order_items (order_id, product_id, product_name, product_price, quantity, subtotal)
+        VALUES (#{orderId}, #{productId}, #{productName}, #{productPrice}, #{quantity}, #{subtotal})
     </insert>
     
-    <!-- 根据订单ID查询订单项列表（关联商品表获取图片） -->
-    <select id="selectOrderItemsByOrderId" resultType="com.example.mailadmin.entity.OrderItems">
-        select 
-            oi.item_id as itemId,
-            oi.order_id as orderId,
-            oi.product_id as productId,
-            oi.product_name as productName,
-            oi.product_price as productPrice,
-            oi.quantity as quantity,
-            oi.subtotal as subtotal,
-            p.image_url as imageUrl 
-        from order_items oi
-        left join products p on oi.product_id = p.id
-        where oi.order_id = #{orderId}
+    <!-- 根据订单ID查询订单项列表 -->
+    <select id="selectOrderItemsByOrderId" parameterType="java.lang.Long" resultType="com.example.mailadmin.entity.OrderItems">
+        SELECT * FROM order_items
+        WHERE order_id = #{orderId}
     </select>
+    
+    <!-- 根据订单号查询订单 -->
+    <select id="selectByOrderNumber" parameterType="java.lang.String" resultType="com.example.mailuser.entity.Orders">
+        SELECT * FROM orders WHERE order_number = #{orderNumber}
+    </select>
+    
 </mapper>

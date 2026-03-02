@@ -53,7 +53,7 @@ public class MyGlobalFilter implements GlobalFilter, Ordered {
 
     private boolean isExclude(String path) {
         // 定义需要放行的路径
-        return path.contains("/login") || path.contains("/register");
+        return path.contains("/login") || path.contains("/register") ;
     }
 
 

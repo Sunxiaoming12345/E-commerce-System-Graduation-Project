@@ -14,6 +14,16 @@ import java.util.List;
 @Data
 public class OrderCreateDTO {
     /**
+     * 用户ID
+     */
+    private Long userId;
+
+    /**
+     * 订单号
+     */
+    private String orderNumber;
+
+    /**
      * 订单商品列表
      */
     private List<OrderItemDTO> items;

@@ -12,6 +12,8 @@ import java.math.BigDecimal;
 public class PayDTO {
    //订单ID
    private Long orderId;
+   //用户ID
+   private Long userId;
    //商品名称
    private String name;
    //商品总价

@@ -18,7 +18,7 @@ public interface PaymentMapper {
      * @param paymentsPageQueryDTO 支付记录查询参数
      * @return 分页结果
      */
-    Page<Payments> pageQuery(PaymentsPageQueryDTO paymentsPageQueryDTO);
+    Page<com.example.mailadmin.vo.PaymentVO> pageQuery(PaymentsPageQueryDTO paymentsPageQueryDTO);
 
     /**
      * 更新支付状态
@@ -81,4 +81,12 @@ public interface PaymentMapper {
      */
     Integer getFailedPaymentCount();
 
-}
+    /**
+     * 根据订单ID查询支付记录
+     *
+     * @param orderId 订单ID
+     * @return 支付记录
+     */
+    Payments getByOrderId(Long orderId);
+
+} 

@@ -24,7 +24,7 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     public PageResult pageQuery(PaymentsPageQueryDTO paymentsPageQueryDTO) {
         PageHelper.startPage(paymentsPageQueryDTO.getPage(), paymentsPageQueryDTO.getPageSize());
-        Page<Payments> page = paymentMapper.pageQuery(paymentsPageQueryDTO);
+        Page<com.example.mailadmin.vo.PaymentVO> page = paymentMapper.pageQuery(paymentsPageQueryDTO);
         return new PageResult(page.getTotal(), page.getResult());
     }
 

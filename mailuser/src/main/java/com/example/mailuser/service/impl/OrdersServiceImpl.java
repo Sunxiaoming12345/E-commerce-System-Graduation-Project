@@ -3,8 +3,10 @@ package com.example.mailuser.service.impl;
 import com.example.constant.OrderStatus;
 import com.example.context.BaseContext;
 import com.example.mailadmin.entity.Products;
+import com.example.mailadmin.entity.Payments;
 
 import com.example.mailadmin.mapper.ProductsMapper;
+import com.example.mailuser.mapper.UserPaymentMapper;
 import com.example.mailuser.dto.MyOrdersPageQueryDTO;
 import com.example.mailuser.dto.PayDTO;
 import com.example.mailuser.dto.PrePurchase;
@@ -71,43 +73,30 @@ public class OrdersServiceImpl implements OrdersService {
     @Autowired
     private RabbitTemplate rabbitTemplate;
 
+    @Autowired
+    private UserPaymentMapper userPaymentMapper;
+
     // 支付
     @Override
     public void pay(PayDTO payDTO) {
         Long userId = BaseContext.getCurrentId();
         log.info("支付订单：userId={}, orderId={}, paymentMethod={}", userId, payDTO.getOrderId(), payDTO.getPaymentMethod());
         
-        // 验证订单是否存在且属于当前用户
-        Orders order = ordersMapper.getOrderByIdAndUserId(payDTO.getOrderId(), userId);
-        if (order == null) {
-            throw new RuntimeException("订单不存在");
+        // 设置用户ID到DTO中
+        payDTO.setUserId(userId);
+        
+        // 发送订单支付消息到RabbitMQ
+        try {
+            rabbitTemplate.convertAndSend(
+                    RabbitMQConstant.ORDER_PAY_EXCHANGE_NAME,
+                    RabbitMQConstant.ORDER_PAY_ROUTING_KEY,
+                    payDTO
+            );
+            log.info("发送订单支付消息：userId={}, orderId={}", userId, payDTO.getOrderId());
+        } catch (Exception e) {
+            log.error("发送订单支付消息失败：", e);
+            throw new RuntimeException("支付失败");
         }
-        
-        // 只有待支付的订单可以支付
-        if (order.getOrderStatus() != OrderStatus.WAIT_PAYMENT) {
-            throw new RuntimeException("只能支付待支付的订单");
-        }
-        
-        // 如果是余额支付，检查余额是否足够
-        if (payDTO.getPaymentMethod() == 2) {
-            boolean isEnough = balanceService.checkBalance(userId, order.getTotalAmount());
-            if (!isEnough) {
-                throw new RuntimeException("余额不足");
-            }
-            // 扣除余额
-            balanceService.decreaseBalance(userId, order.getTotalAmount());
-            log.info("余额支付成功：userId={}, amount={}", userId, order.getTotalAmount());
-        }
-        
-        // 更新订单状态为已支付，并更新支付方式
-        order.setOrderStatus(OrderStatus.PAID);
-        order.setPaymentMethod(payDTO.getPaymentMethod());
-        order.setPayTime(LocalDateTime.now());
-        
-        // 这里可以添加其他支付方式的逻辑，比如调用第三方支付接口等
-        
-        // 更新订单支付信息
-        ordersMapper.updateOrderForPayment(payDTO.getOrderId(), OrderStatus.PAID, payDTO.getPaymentMethod());
     }
 
     @Override
@@ -124,78 +113,31 @@ public class OrdersServiceImpl implements OrdersService {
         Long userId = BaseContext.getCurrentId();
         log.info("创建订单：userId={}, orderData={}", userId, orderCreateDTO);
         
-        // 检查库存并减少库存
-        for (com.example.mailuser.dto.OrderCreateDTO.OrderItemDTO item : orderCreateDTO.getItems()) {
-            // 获取商品信息
-            com.example.mailuser.vo.ProductVO productVO = productMapper.getProductById(item.getProductId());
-            if (productVO == null) {
-                log.error("商品不存在：productId={}", item.getProductId());
-                throw new RuntimeException("商品不存在");
-            }
-            // 检查库存是否足够
-            if (productVO.getStock() < item.getQuantity()) {
-                log.error("商品库存不足：productId={}, 库存={}, 需求={}", item.getProductId(), productVO.getStock(), item.getQuantity());
-                throw new RuntimeException("商品库存不足");
-            }
-            // 减少库存
-            int oldStock = productVO.getStock();
-            int newStock = oldStock - item.getQuantity();
-            productMapper.updateStock(item.getProductId(), newStock);
-            log.info("减少商品库存：productId={}, 原库存={}, 减少数量={}, 新库存={}", item.getProductId(), oldStock, item.getQuantity(), newStock);
-            // 只有当库存从有到0时才发送消息
-            if (oldStock > 0 && newStock == 0) {
-                sendStockUpdateMessage(item.getProductId(), newStock);
-            }
+        // 设置用户ID到DTO中
+        orderCreateDTO.setUserId(userId);
+        
+        // 生成临时订单号（用于返回给前端）
+        String tempOrderNumber = userId.toString() + System.currentTimeMillis();
+        
+        // 将订单号设置到DTO中
+        orderCreateDTO.setOrderNumber(tempOrderNumber);
+        
+        // 发送订单创建消息到RabbitMQ
+        try {
+            rabbitTemplate.convertAndSend(
+                    RabbitMQConstant.ORDER_CREATE_EXCHANGE_NAME,
+                    RabbitMQConstant.ORDER_CREATE_ROUTING_KEY,
+                    orderCreateDTO
+            );
+            log.info("发送订单创建消息：userId={}, orderNumber={}", userId, tempOrderNumber);
+        } catch (Exception e) {
+            log.error("发送订单创建消息失败：", e);
+            throw new RuntimeException("订单创建失败");
         }
         
-        // 创建订单记录
-        Orders orders = new Orders();
-        orders.setUserId(userId);
-        orders.setOrderNumber(userId.toString() + System.currentTimeMillis());
-        orders.setOrderStatus(com.example.constant.OrderStatus.WAIT_PAYMENT);
-        orders.setPaymentMethod(orderCreateDTO.getPaymentMethod());
-        orders.setTotalAmount(orderCreateDTO.getTotalAmount());
-        orders.setShippingAddress(orderCreateDTO.getShippingAddress());
-        orders.setReceiverName(orderCreateDTO.getReceiverName());
-        orders.setReceiverPhone(orderCreateDTO.getReceiverPhone());
-        orders.setCreateTime(java.time.LocalDateTime.now());
-        
-        // 保存订单
-        ordersMapper.pay(orders);
-        
-        // 保存订单项
-        for (com.example.mailuser.dto.OrderCreateDTO.OrderItemDTO item : orderCreateDTO.getItems()) {
-            // 获取商品信息
-            com.example.mailuser.vo.ProductVO productVO = productMapper.getProductById(item.getProductId());
-            if (productVO != null) {
-                // 计算小计金额
-                BigDecimal subtotal = productVO.getPrice().multiply(new BigDecimal(item.getQuantity()));
-                // 保存订单项
-                ordersMapper.saveOrderItem(orders.getOrderId(), item.getProductId(), productVO.getName(), productVO.getPrice(), item.getQuantity(), subtotal);
-                log.info("保存订单项：orderId={}, productId={}, quantity={}", orders.getOrderId(), item.getProductId(), item.getQuantity());
-            }
-            // 这里可以调用购物车服务移除商品
-            // 暂时注释，后续可以实现
-            log.info("从购物车移除商品：productId={}, quantity={}", item.getProductId(), item.getQuantity());
-        }
-
-
-        // 发送延迟消息，10分钟后检查订单是否支付
-        long delayTime =  10 * 1000; // 10分钟
-        Map<String, Object> message = new HashMap<>();
-        message.put("orderId", orders.getOrderId());
-        rabbitTemplate.convertAndSend(
-                RabbitMQConstant.DELAY_EXCHANGE_NAME,
-                RabbitMQConstant.DELAY_ROUTING_KEY,
-                message,
-                msg -> {
-                    msg.getMessageProperties().setHeader("x-delay", delayTime);
-                    return msg;
-                }
-        );
-        log.info("发送订单延迟消息：orderId={}, delayTime={}ms", orders.getOrderId(), delayTime);
-
-        return orders.getOrderId();
+        // 这里返回临时生成的订单号，实际订单ID会在消息消费者中生成
+        // 注意：如果需要返回真实的订单ID，需要修改为异步返回或使用消息回调机制
+        return Long.parseLong(tempOrderNumber);
     }
 
     @Override
@@ -236,6 +178,13 @@ public class OrdersServiceImpl implements OrdersService {
         
         // 更新订单状态为已取消
         ordersMapper.updateOrderStatus(orderId, OrderStatus.CANCELLED);
+        
+        // 更新支付记录状态为已取消
+        Payments payment = userPaymentMapper.getByOrderId(orderId);
+        if (payment != null) {
+            userPaymentMapper.updateStatus(payment.getPaymentId(), 2); // 2-已取消
+            log.info("支付记录已取消：paymentId={}, orderId={}", payment.getPaymentId(), orderId);
+        }
     }
 
     @Override

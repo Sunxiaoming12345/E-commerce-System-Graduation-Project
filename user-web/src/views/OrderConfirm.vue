@@ -91,6 +91,10 @@
       v-model="balanceDialogVisible"
       title="余额支付确认"
       width="400px"
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
+      @open="startCountdown"
+      @close="clearCountdown"
     >
       <div class="balance-info">
         <p class="balance-item">
@@ -100,6 +104,12 @@
         <p class="balance-item">
           <span>本次支付金额：</span>
           <span class="payment-amount">¥{{ actualAmount.toFixed(2) }}</span>
+        </p>
+        <p class="balance-item countdown">
+          <span>支付剩余时间：</span>
+          <span class="countdown-time" :class="{ 'warning': countdownSeconds < 300, 'danger': countdownSeconds < 60 }">
+            {{ formatCountdown(countdownSeconds) }}
+          </span>
         </p>
       </div>
       <template #footer>
@@ -144,6 +154,10 @@ const shippingFee = ref(0)
 const balanceDialogVisible = ref(false)
 const userBalance = ref(0)
 const currentOrderId = ref(null)
+
+// 倒计时相关
+const countdownSeconds = ref(30) // 30秒，与后端延迟消息时间一致
+const countdownTimer = ref(null)
 
 // 计算商品总价
 const totalPrice = computed(() => {
@@ -257,6 +271,45 @@ const cancelBalancePayment = () => {
   router.push('/orders')
 }
 
+// 格式化倒计时显示
+const formatCountdown = (seconds) => {
+  const minutes = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+}
+
+// 开始倒计时
+const startCountdown = () => {
+  // 重置倒计时为30秒，与后端延迟消息时间一致
+  countdownSeconds.value = 30
+  
+  // 清除之前的定时器
+  if (countdownTimer.value) {
+    clearInterval(countdownTimer.value)
+  }
+  
+  // 开始倒计时
+  countdownTimer.value = setInterval(() => {
+    if (countdownSeconds.value > 0) {
+      countdownSeconds.value--
+    } else {
+      // 倒计时结束
+      clearCountdown()
+      balanceDialogVisible.value = false
+      ElMessage.warning('订单支付超时，已自动取消')
+      router.push('/orders')
+    }
+  }, 1000)
+}
+
+// 清除倒计时
+const clearCountdown = () => {
+  if (countdownTimer.value) {
+    clearInterval(countdownTimer.value)
+    countdownTimer.value = null
+  }
+}
+
 // 确认余额支付
 const confirmBalancePayment = async () => {
   if (!currentOrderId.value) {
@@ -280,6 +333,8 @@ const confirmBalancePayment = async () => {
   } finally {
     loading.value = false
     balanceDialogVisible.value = false
+    // 清除倒计时
+    clearCountdown()
     // 无论支付成功还是失败，都跳转到订单列表
     router.push('/orders')
   }
@@ -402,5 +457,33 @@ onMounted(async () => {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+/* 倒计时样式 */
+.countdown-time {
+  font-weight: bold;
+  color: #1890ff;
+  font-size: 18px;
+}
+
+.countdown-time.warning {
+  color: #faad14;
+}
+
+.countdown-time.danger {
+  color: #ff4d4f;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 </style>

@@ -89,6 +89,7 @@
         set stock = #{stock},
             update_time = now()
         where id = #{id}
+          and stock > 0
     </update>
 
 </mapper>

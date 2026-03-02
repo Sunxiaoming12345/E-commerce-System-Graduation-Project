@@ -2,9 +2,9 @@
   <div class="payments-page">
     <div class="toolbar">
       <el-select v-model="query.status" placeholder="支付状态" clearable style="width: 120px" @change="loadList">
-        <el-option label="未支付" :value="0" />
-        <el-option label="已支付" :value="1" />
-        <el-option label="支付失败" :value="2" />
+        <el-option label="待付款" :value="0" />
+        <el-option label="已付款" :value="1" />
+        <el-option label="已取消" :value="2" />
       </el-select>
       <el-select v-model="query.paymentMethod" placeholder="支付方式" clearable style="width: 120px" @change="loadList">
         <el-option label="支付宝" :value="0" />
@@ -41,7 +41,7 @@
     </el-row>
     <el-table :data="list" stripe v-loading="loading" style="width: 100%">
       <el-table-column prop="paymentId" label="支付ID" width="90" />
-      <el-table-column prop="orderId" label="订单ID" width="90" />
+      <el-table-column prop="orderNumber" label="订单编号" min-width="150" />
       <el-table-column prop="amount" label="金额" width="100">
         <template #default="{ row }">¥ {{ formatMoney(row.amount) }}</template>
       </el-table-column>
@@ -78,7 +78,7 @@ const paymentStats = ref({})
 const query = reactive({ orderId: null, status: null, paymentMethod: null, page: 1, pageSize: 10 })
 
 const paymentMethodMap = { 0: '支付宝', 1: '微信', 2: '银行卡' }
-const paymentStatusMap = { 0: '未支付', 1: '已支付', 2: '支付失败' }
+const paymentStatusMap = { 0: '待付款', 1: '已付款', 2: '已取消' }
 function paymentMethodText(v) {
   return paymentMethodMap[v] ?? '-'
 }
