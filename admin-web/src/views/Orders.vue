@@ -28,7 +28,7 @@
       <el-table-column label="操作" width="120" fixed="right">
         <template #default="{ row }">
           <el-button type="primary" link @click="openDetail(row)">详情</el-button>
-          <el-button type="primary" link @click="openStatus(row)">改状态</el-button>
+          <el-button v-if="row.orderStatus !== 4" type="primary" link @click="openStatus(row)">改状态</el-button>
         </template>
       </el-table-column>
     </el-table>

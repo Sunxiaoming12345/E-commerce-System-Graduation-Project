@@ -46,6 +46,12 @@ public class ShopCartServiceImpl implements ShopCartService {
             throw new RuntimeException("商品不存在");
         }
 
+        // 检查商品是否已下架
+        if (product.getStatus() == 0) {
+            log.error("商品已下架：productId={}", productId);
+            throw new RuntimeException("商品已下架");
+        }
+
         // 检查商品库存
         if (product.getStock() < quantity) {
             log.error("商品库存不足：productId={}, 库存={}, 需求={}", productId, product.getStock(), quantity);

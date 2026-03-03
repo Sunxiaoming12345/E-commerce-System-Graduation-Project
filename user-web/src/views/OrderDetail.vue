@@ -126,7 +126,7 @@ const loading = ref(true)
 const paymentMethod = ref('2') // 默认余额支付
 
 // 倒计时相关
-const countdownSeconds = ref(30) // 30秒，与后端延迟消息时间一致
+const countdownSeconds = ref(600) // 10分钟，与后端延迟消息时间一致
 const countdownTimer = ref(null)
 
 const loadOrderDetail = async () => {
@@ -146,6 +146,11 @@ const loadOrderDetail = async () => {
     
     // 如果订单状态是待付款，开始倒计时
     if (res.order.orderStatus === 0) {
+      // 从后端获取支付剩余时间
+      if (res.paymentRemainingTime) {
+        countdownSeconds.value = res.paymentRemainingTime
+        console.log('Using payment remaining time from backend:', res.paymentRemainingTime)
+      }
       startCountdown()
     } else {
       // 清除倒计时
@@ -215,9 +220,6 @@ const formatCountdown = (seconds) => {
 
 // 开始倒计时
 const startCountdown = () => {
-  // 重置倒计时为30秒，与后端延迟消息时间一致
-  countdownSeconds.value = 30
-  
   // 清除之前的定时器
   if (countdownTimer.value) {
     clearInterval(countdownTimer.value)

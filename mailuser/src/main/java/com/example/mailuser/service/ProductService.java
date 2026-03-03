@@ -32,7 +32,7 @@ public interface ProductService {
      * @param categoryId 分类ID
      * @return 商品列表
      */
-    List<ProductVO> getProductsByCategoryId(Integer categoryId);
+    List<ProductVO> getProductsByCategoryId(Long categoryId);
 
     /**
      * 根据ID获取商品详情
@@ -46,4 +46,20 @@ public interface ProductService {
      * 清除推荐商品缓存
      */
     void clearRecommendedProductsCache();
+
+    /**
+     * 清除分类商品缓存
+     * @param categoryId 分类ID
+     */
+    void clearCategoryProductsCache(Long categoryId);
+
+    /**
+     * 清除所有分类商品缓存
+     */
+    void clearAllCategoryProductsCache();
+
+    /**
+     * 清除分类列表缓存
+     */
+    void clearCategoriesCache();
 }

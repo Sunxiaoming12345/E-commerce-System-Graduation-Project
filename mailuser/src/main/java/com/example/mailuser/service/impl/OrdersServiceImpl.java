@@ -41,27 +41,36 @@ public class OrdersServiceImpl implements OrdersService {
  // 预下单
     @Override
     public PrePurchaseVO prepurchase(PrePurchase prePurchase) {
-        // 这里使用 productMapper 获取商品信息
-        // 注意：prePurchase 应该包含商品ID，而不是用户ID
-        // 暂时保留原逻辑，后续可以优化
-        Products products = new Products();
-        // 这里应该从 productMapper 获取商品信息
-        // 暂时设置默认值，避免空指针异常
-        products.setStock(100);
-        products.setName("测试商品");
-        products.setPrice(new BigDecimal(100));
-        products.setImageUrl("/images/test.jpg");
+        // 获取商品ID
+        Long productId = prePurchase.getProductId();
         
-        if(prePurchase.getQuantity()>products.getStock())
-        {
-            throw new RuntimeException("库存不足");
+        // 从数据库中获取商品信息
+        com.example.mailuser.vo.ProductVO product = productMapper.getProductById(productId);
+        
+        // 检查商品是否存在
+        if (product == null) {
+            log.error("商品不存在：productId={}", productId);
+            throw new RuntimeException("商品不存在");
         }
+        
+        // 检查商品是否已下架
+        if (product.getStatus() == 0) {
+            log.error("商品已下架：productId={}", productId);
+            throw new RuntimeException("商品已下架");
+        }
+        
+        // 检查商品库存
+        if (prePurchase.getQuantity() > product.getStock()) {
+            log.error("商品库存不足：productId={}, 库存={}, 需求={}", productId, product.getStock(), prePurchase.getQuantity());
+            throw new RuntimeException("商品库存不足");
+        }
+        
         PrePurchaseVO prePurchaseVO = new PrePurchaseVO();
-        prePurchaseVO.setName(products.getName());
-        prePurchaseVO.setTotalAmount(products.getPrice().multiply(new BigDecimal(prePurchase.getQuantity())));
+        prePurchaseVO.setName(product.getName());
+        prePurchaseVO.setTotalAmount(product.getPrice().multiply(new BigDecimal(prePurchase.getQuantity())));
         prePurchaseVO.setQuantity(prePurchase.getQuantity());
-        prePurchaseVO.setImageUrl(products.getImageUrl());
-        prePurchaseVO.setPrice(products.getPrice());
+        prePurchaseVO.setImageUrl(product.getImageUrl());
+        prePurchaseVO.setPrice(product.getPrice());
 
         return prePurchaseVO;
 
@@ -109,7 +118,7 @@ public class OrdersServiceImpl implements OrdersService {
     }
 
     @Override
-    public Long createOrder(com.example.mailuser.dto.OrderCreateDTO orderCreateDTO) {
+    public com.example.mailuser.vo.OrderCreateResultVO createOrder(com.example.mailuser.dto.OrderCreateDTO orderCreateDTO) {
         Long userId = BaseContext.getCurrentId();
         log.info("创建订单：userId={}, orderData={}", userId, orderCreateDTO);
         
@@ -135,9 +144,11 @@ public class OrdersServiceImpl implements OrdersService {
             throw new RuntimeException("订单创建失败");
         }
         
-        // 这里返回临时生成的订单号，实际订单ID会在消息消费者中生成
-        // 注意：如果需要返回真实的订单ID，需要修改为异步返回或使用消息回调机制
-        return Long.parseLong(tempOrderNumber);
+        // 支付超时时间，使用常量定义
+        Integer paymentTimeout = OrderStatus.PAYMENT_TIMEOUT_SECONDS;
+        
+        // 这里返回临时生成的订单号和支付超时时间，实际订单ID会在消息消费者中生成
+        return new com.example.mailuser.vo.OrderCreateResultVO(Long.parseLong(tempOrderNumber), paymentTimeout);
     }
 
     @Override
@@ -165,13 +176,13 @@ public class OrdersServiceImpl implements OrdersService {
             com.example.mailuser.vo.ProductVO productVO = productMapper.getProductById(item.getProductId());
             if (productVO != null) {
                 // 增加库存
-                int oldStock = productVO.getStock();
-                int newStock = oldStock + item.getQuantity();
-                productMapper.updateStock(item.getProductId(), newStock);
-                log.info("恢复商品库存：productId={}, 原库存={}, 增加数量={}, 新库存={}", item.getProductId(), oldStock, item.getQuantity(), newStock);
+                    int oldStock = productVO.getStock();
+                    int newStock = oldStock + item.getQuantity();
+                    productMapper.restoreStock(item.getProductId(), newStock);
+                    log.info("恢复商品库存：productId={}, 原库存={}, 增加数量={}, 新库存={}", item.getProductId(), oldStock, item.getQuantity(), newStock);
                 // 只有当库存从0到有时才发送消息
                 if (oldStock == 0 && newStock > 0) {
-                    sendStockUpdateMessage(item.getProductId(), newStock);
+                    sendStockUpdateMessage(item.getProductId(), newStock, productVO.getCategoryId());
                 }
             }
         }
@@ -227,16 +238,33 @@ public class OrdersServiceImpl implements OrdersService {
         orderDetailVO.setOrder(order);
         orderDetailVO.setOrderItems(orderItemVOs);
         
+        // 计算支付剩余时间（秒）
+        if (order.getOrderStatus() == OrderStatus.WAIT_PAYMENT) {
+            // 支付超时时间：订单创建时间 + 支付超时时间常量
+            LocalDateTime paymentTimeoutTime = order.getCreateTime().plusSeconds(OrderStatus.PAYMENT_TIMEOUT_SECONDS);
+            // 当前时间
+            LocalDateTime currentTime = LocalDateTime.now();
+            // 计算剩余时间（秒）
+            long remainingSeconds = java.time.Duration.between(currentTime, paymentTimeoutTime).getSeconds();
+            // 如果剩余时间小于0，设置为0
+            orderDetailVO.setPaymentRemainingTime((int) Math.max(0, remainingSeconds));
+        } else {
+            // 非待支付状态，支付剩余时间为0
+            orderDetailVO.setPaymentRemainingTime(0);
+        }
+        
         return orderDetailVO;
     }
 
     // 发送库存更新消息到RabbitMQ
-    private void sendStockUpdateMessage(Long productId, Integer stock) {
+    private void sendStockUpdateMessage(Long productId, Integer stock, Long categoryId) {
         try {
-            String message = "Product " + productId + " stock updated to " + stock;
+            // 构建包含商品ID、库存和分类ID的消息
+            String message = productId + "," + stock + "," + categoryId;
             rabbitTemplate.convertAndSend(RabbitMQConstant.STOCK_EXCHANGE_NAME, RabbitMQConstant.STOCK_ROUTING_KEY, message);
+            log.info("发送库存更新消息：productId={}, stock={}, categoryId={}", productId, stock, categoryId);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("发送库存更新消息失败：", e);
         }
     }
 

@@ -35,7 +35,7 @@ public interface ProductMapper {
      * @param categoryId 分类ID
      * @return 商品列表
      */
-    List<ProductVO> getProductsByCategoryId(@Param("categoryId") Integer categoryId);
+    List<ProductVO> getProductsByCategoryId(@Param("categoryId") Long categoryId);
 
     /**
      * 根据ID获取商品详情
@@ -46,10 +46,18 @@ public interface ProductMapper {
     ProductVO getProductById(@Param("id") Long id);
 
     /**
-     * 更新商品库存
+     * 更新商品库存（用于购买时，防止超卖）
      *
      * @param id 商品ID
      * @param stock 库存数量
      */
     void updateStock(@Param("id") Long id, @Param("stock") Integer stock);
+
+    /**
+     * 恢复商品库存（用于订单取消时）
+     *
+     * @param id 商品ID
+     * @param stock 库存数量
+     */
+    void restoreStock(@Param("id") Long id, @Param("stock") Integer stock);
 }

@@ -39,7 +39,7 @@ public class Products
 
     /** 商品分类ID（关联categories表） */
 
-    private Integer categoryId;
+    private Long categoryId;
 
     /** 商品价格 */
 

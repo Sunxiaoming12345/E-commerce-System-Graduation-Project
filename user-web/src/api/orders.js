@@ -37,3 +37,11 @@ export function payOrder(data) {
         data
     })
 }
+
+export function prepurchase(data) {
+    return request({
+        url: '/user/orders/prepurchase',
+        method: 'post',
+        data
+    })
+}

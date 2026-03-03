@@ -40,7 +40,7 @@ public class ProductVO {
     /**
      * 商品分类ID
      */
-    private Integer categoryId;
+    private Long categoryId;
 
     /**
      * 商品分类名称

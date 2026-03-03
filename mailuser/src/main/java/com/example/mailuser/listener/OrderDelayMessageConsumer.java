@@ -79,11 +79,11 @@ public class OrderDelayMessageConsumer {
                     // 增加库存
                     int oldStock = productVO.getStock();
                     int newStock = oldStock + item.getQuantity();
-                    productMapper.updateStock(item.getProductId(), newStock);
+                    productMapper.restoreStock(item.getProductId(), newStock);
                     log.info("恢复商品库存：productId={}, 原库存={}, 增加数量={}, 新库存={}", item.getProductId(), oldStock, item.getQuantity(), newStock);
                     // 只有当库存从0到有时才发送消息
                     if (oldStock == 0 && newStock > 0) {
-                        sendStockUpdateMessage(item.getProductId(), newStock);
+                        sendStockUpdateMessage(item.getProductId(), newStock, productVO.getCategoryId());
                     }
                 }
             }
@@ -104,12 +104,14 @@ public class OrderDelayMessageConsumer {
     }
 
     // 发送库存更新消息到RabbitMQ
-    private void sendStockUpdateMessage(Long productId, Integer stock) {
+    private void sendStockUpdateMessage(Long productId, Integer stock, Long categoryId) {
         try {
-            String message = "Product " + productId + " stock updated to " + stock;
+            // 构建包含商品ID、库存和分类ID的消息
+            String message = productId + "," + stock + "," + categoryId;
             rabbitTemplate.convertAndSend(RabbitMQConstant.STOCK_EXCHANGE_NAME, RabbitMQConstant.STOCK_ROUTING_KEY, message);
+            log.info("发送库存更新消息：productId={}, stock={}, categoryId={}", productId, stock, categoryId);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("发送库存更新消息失败：", e);
         }
     }
 }

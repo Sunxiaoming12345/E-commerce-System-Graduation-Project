@@ -63,9 +63,9 @@ public class OrdersController {
     // 创建订单
     @PostMapping("/create")
     @ApiOperation(value = "创建订单", notes = "根据购物车商品创建新订单")
-    public Result<Long> createOrder(@ApiParam(name = "orderData", value = "订单创建信息", required = true) @RequestBody OrderCreateDTO orderData) {
-        Long orderId = ordersService.createOrder(orderData);
-        return Result.success(orderId);
+    public Result<com.example.mailuser.vo.OrderCreateResultVO> createOrder(@ApiParam(name = "orderData", value = "订单创建信息", required = true) @RequestBody OrderCreateDTO orderData) {
+        com.example.mailuser.vo.OrderCreateResultVO result = ordersService.createOrder(orderData);
+        return Result.success(result);
     }
 
     // 取消订单

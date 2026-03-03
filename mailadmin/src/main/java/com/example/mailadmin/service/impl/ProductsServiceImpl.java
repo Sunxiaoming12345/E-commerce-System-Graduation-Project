@@ -22,6 +22,7 @@ import com.example.constant.RabbitMQConstant;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 
@@ -34,6 +35,11 @@ public class ProductsServiceImpl implements ProductsService
 
     @Autowired
     private RabbitTemplate rabbitTemplate;
+
+    @Autowired
+    private RedisTemplate<String, String> redisTemplate;
+
+    private static final String RECOMMENDED_PRODUCTS_CACHE_KEY = "products:recommended";
 
     // 分页查询商品
     @Override
@@ -79,7 +85,7 @@ public class ProductsServiceImpl implements ProductsService
         
         // 只有当库存从有到0或从0到有时才发送消息
         if ((currentStock > 0 && newStock == 0) || (currentStock == 0 && newStock > 0)) {
-            sendStockUpdateMessage(editProductsDTO.getId(), newStock);
+            sendStockUpdateMessage(editProductsDTO.getId(), newStock, currentProduct.getCategoryId());
         }
     }
 
@@ -104,11 +110,18 @@ public class ProductsServiceImpl implements ProductsService
         // 获取当前库存
         Products product = productsMapper.selectProductsById(id);
         Integer currentStock = product.getStock();
+        Long categoryId = product.getCategoryId();
         // 更新库存
         productsMapper.updateStock(id, stock);
-        // 只有当库存从有到0或从0到有时才发送消息
+        // 只有当库存从有到0或从0到有时才发送消息和清除缓存
         if ((currentStock > 0 && stock == 0) || (currentStock == 0 && stock > 0)) {
-            sendStockUpdateMessage(id, stock);
+            sendStockUpdateMessage(id, stock, categoryId);
+            // 清除对应分类的商品缓存
+            if (categoryId != null) {
+                clearCategoryProductCache(categoryId);
+            }
+            // 清除推荐商品缓存
+            clearProductCache();
         }
     }
 
@@ -116,13 +129,20 @@ public class ProductsServiceImpl implements ProductsService
     @Override
     public void batchUpdateStock(List<StockUpdateDTO> stockUpdateDTOs) {
         List<Map<String, Object>> stockUpdateList = new ArrayList<>();
+        boolean needClearRecommendedCache = false;
         for (StockUpdateDTO dto : stockUpdateDTOs) {
             // 获取当前库存
             Products product = productsMapper.selectProductsById(dto.getId());
             Integer currentStock = product.getStock();
-            // 只有当库存从有到0或从0到有时才发送消息
+            Long categoryId = product.getCategoryId();
+            // 只有当库存从有到0或从0到有时才发送消息和清除缓存
             if ((currentStock > 0 && dto.getStock() == 0) || (currentStock == 0 && dto.getStock() > 0)) {
-                sendStockUpdateMessage(dto.getId(), dto.getStock());
+                sendStockUpdateMessage(dto.getId(), dto.getStock(), categoryId);
+                // 清除对应分类的商品缓存
+                if (categoryId != null) {
+                    clearCategoryProductCache(categoryId);
+                }
+                needClearRecommendedCache = true;
             }
             Map<String, Object> map = new HashMap<>();
             map.put("id", dto.getId());
@@ -130,15 +150,44 @@ public class ProductsServiceImpl implements ProductsService
             stockUpdateList.add(map);
         }
         productsMapper.batchUpdateStock(stockUpdateList);
+        // 如果有商品库存状态发生变化，清除推荐商品缓存
+        if (needClearRecommendedCache) {
+            clearProductCache();
+        }
     }
 
     // 发送库存更新消息到RabbitMQ
-    private void sendStockUpdateMessage(Long productId, Integer stock) {
+    private void sendStockUpdateMessage(Long productId, Integer stock, Long categoryId) {
         try {
-            String message = "Product " + productId + " stock updated to " + stock;
+            // 构建包含商品ID、库存和分类ID的消息
+            String message = productId + "," + stock + "," + categoryId;
             rabbitTemplate.convertAndSend(RabbitMQConstant.STOCK_EXCHANGE_NAME, RabbitMQConstant.STOCK_ROUTING_KEY, message);
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    // 清除商品相关缓存
+    private void clearProductCache() {
+        try {
+            // 清除商品推荐缓存
+            redisTemplate.delete(RECOMMENDED_PRODUCTS_CACHE_KEY);
+            System.out.println("商品推荐缓存已清除");
+        } catch (Exception e) {
+            // 缓存清除失败不影响主业务流程
+            System.out.println("缓存清除失败，不影响商品操作: " + e.getMessage());
+        }
+    }
+
+    // 清除分类商品缓存
+    private void clearCategoryProductCache(Long categoryId) {
+        try {
+            String categoryProductsCacheKey = "products:category:" + categoryId;
+            redisTemplate.delete(categoryProductsCacheKey);
+            System.out.println("分类商品缓存已清除，分类ID：" + categoryId);
+        } catch (Exception e) {
+            // 缓存清除失败不影响主业务流程
+            System.out.println("分类商品缓存清除失败，不影响商品操作: " + e.getMessage());
         }
     }
 
@@ -146,11 +195,29 @@ public class ProductsServiceImpl implements ProductsService
     @Override
     public void enable(Long[] ids) {
         productsMapper.enable(ids);
+        // 清除商品相关缓存
+        clearProductCache();
+        // 清除对应分类的商品缓存
+        for (Long id : ids) {
+            Products product = productsMapper.selectProductsById(id);
+            if (product != null && product.getCategoryId() != null) {
+                clearCategoryProductCache(product.getCategoryId());
+            }
+        }
     }
 
     // 下架商品
     @Override
     public void disable(Long[] ids) {
         productsMapper.disable(ids);
+        // 清除商品相关缓存
+        clearProductCache();
+        // 清除对应分类的商品缓存
+        for (Long id : ids) {
+            Products product = productsMapper.selectProductsById(id);
+            if (product != null && product.getCategoryId() != null) {
+                clearCategoryProductCache(product.getCategoryId());
+            }
+        }
     }
 }

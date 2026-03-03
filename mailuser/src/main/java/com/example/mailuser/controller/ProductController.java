@@ -61,7 +61,7 @@ public class ProductController {
      */
     @GetMapping("/category/{categoryId}")
     @ApiOperation(value = "根据分类ID获取商品列表", notes = "根据选择的分类ID，显示该分类下的所有上架商品")
-    public Result<List<ProductVO>> getProductsByCategoryId(@PathVariable Integer categoryId) {
+    public Result<List<ProductVO>> getProductsByCategoryId(@PathVariable Long categoryId) {
         List<ProductVO> products = productService.getProductsByCategoryId(categoryId);
         return Result.success(products);
     }

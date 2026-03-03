@@ -1,0 +1,1 @@
+import{s as e}from"./index-f5177282.js";function u(t){return e({url:"/user/products/recommended",method:"get"})}function o(t){return e({url:`/user/products/detail/${t}`,method:"get"})}function s(){return e({url:"/user/products/categories",method:"get"})}function c(t){return e({url:`/user/products/category/${t}`,method:"get"})}export{u as a,c as b,o as c,s as g};

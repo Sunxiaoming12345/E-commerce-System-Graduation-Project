@@ -22,4 +22,9 @@ public class OrderDetailVO {
      * 订单项列表
      */
     private List<OrderItemVO> orderItems;
+    
+    /**
+     * 支付剩余时间（秒）
+     */
+    private Integer paymentRemainingTime;
 }

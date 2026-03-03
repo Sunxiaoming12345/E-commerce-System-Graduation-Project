@@ -80,16 +80,23 @@
             categories c ON p.category_id = c.id
         WHERE
             p.id = #{id}
-          AND p.status = 1
     </select>
 
-    <!-- 更新商品库存 -->
+    <!-- 更新商品库存（用于购买时，防止超卖） -->
     <update id="updateStock">
         update products
         set stock = #{stock},
             update_time = now()
         where id = #{id}
           and stock > 0
+    </update>
+
+    <!-- 恢复商品库存（用于订单取消时） -->
+    <update id="restoreStock">
+        update products
+        set stock = #{stock},
+            update_time = now()
+        where id = #{id}
     </update>
 
 </mapper>

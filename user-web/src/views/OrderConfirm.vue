@@ -128,6 +128,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { createOrder, payOrder } from '@/api/orders'
 import { removeCartItem } from '@/api/cart'
 import { getBalance } from '@/api/balance'
+import { getProductDetail } from '@/api/products'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/store/user'
 
@@ -156,7 +157,7 @@ const userBalance = ref(0)
 const currentOrderId = ref(null)
 
 // 倒计时相关
-const countdownSeconds = ref(30) // 30秒，与后端延迟消息时间一致
+const countdownSeconds = ref(600) // 10分钟，默认值
 const countdownTimer = ref(null)
 
 // 计算商品总价
@@ -172,7 +173,7 @@ const actualAmount = computed(() => {
 })
 
 // 加载订单商品信息
-const loadOrderItems = () => {
+const loadOrderItems = async () => {
   // 从路由参数中获取选中的商品
   const selectedItems = JSON.parse(localStorage.getItem('selectedCartItems') || '[]')
   if (selectedItems.length === 0) {
@@ -180,7 +181,37 @@ const loadOrderItems = () => {
     router.push('/cart')
     return
   }
-  orderItems.value = selectedItems
+  
+  // 重新获取商品的最新信息，包括商品状态
+  try {
+    const updatedItems = await Promise.all(selectedItems.map(async (item) => {
+      try {
+        const productDetail = await getProductDetail(item.productId)
+        console.log(`获取商品详情成功：productId=${item.productId}`, productDetail)
+        return {
+          ...item,
+          status: productDetail.status, // 更新商品状态
+          stock: productDetail.stock // 更新商品库存
+        }
+      } catch (error) {
+        console.error(`获取商品详情失败：productId=${item.productId}`, error)
+        // 如果获取失败，将商品状态设置为 0（已下架）
+        return {
+          ...item,
+          status: 0
+        }
+      }
+    }))
+    console.log('更新后的商品信息：', updatedItems)
+    orderItems.value = updatedItems
+  } catch (error) {
+    console.error('加载商品信息失败', error)
+    // 如果加载失败，将所有商品状态设置为 0（已下架）
+    orderItems.value = selectedItems.map(item => ({
+      ...item,
+      status: 0
+    }))
+  }
 }
 
 // 加载用户常用收货人信息
@@ -213,6 +244,49 @@ const submitOrder = async () => {
     return
   }
 
+  // 重新获取商品的最新状态
+  try {
+    const latestItems = await Promise.all(orderItems.value.map(async (item) => {
+      try {
+        const productDetail = await getProductDetail(item.productId)
+        console.log(`提交订单时获取商品详情：productId=${item.productId}`, productDetail)
+        return {
+          ...item,
+          status: productDetail.status,
+          stock: productDetail.stock
+        }
+      } catch (error) {
+        console.error(`获取商品详情失败：productId=${item.productId}`, error)
+        return {
+          ...item,
+          status: 0
+        }
+      }
+    }))
+    
+    // 检查商品状态
+    const offlineItems = latestItems.filter(item => item.status == 0)
+    if (offlineItems.length > 0) {
+      ElMessage.error('选中的商品中有已下架商品，无法结算')
+      // 跳转到购物车页面
+      setTimeout(() => {
+        router.push('/cart')
+      }, 1500)
+      return
+    }
+    
+    // 更新订单商品信息为最新状态
+    orderItems.value = latestItems
+  } catch (error) {
+    console.error('检查商品状态失败', error)
+    ElMessage.error('检查商品状态失败，无法提交订单')
+    // 跳转到购物车页面
+    setTimeout(() => {
+      router.push('/cart')
+    }, 1500)
+    return
+  }
+
   try {
     loading.value = true
     
@@ -231,7 +305,11 @@ const submitOrder = async () => {
 
     // 调用创建订单接口
     const res = await createOrder(orderData)
-    currentOrderId.value = res
+    currentOrderId.value = res.orderId
+    
+    // 获取支付超时时间（秒）
+    const paymentTimeout = res.paymentTimeout || 600
+    console.log('支付超时时间：', paymentTimeout, '秒')
     
     // 检查是否是直接购买
     const isDirectPurchase = localStorage.getItem('isDirectPurchase') === 'true'
@@ -250,6 +328,8 @@ const submitOrder = async () => {
     // 如果是余额支付，显示确认弹窗
     if (form.value.paymentMethod === '2') {
       await loadUserBalance()
+      // 设置倒计时时间为从后端获取的支付超时时间
+      countdownSeconds.value = paymentTimeout
       balanceDialogVisible.value = true
     } else {
       // 其他支付方式直接跳转到订单列表
@@ -257,7 +337,12 @@ const submitOrder = async () => {
       router.push('/orders')
     }
   } catch (error) {
-    ElMessage.error('提交订单失败')
+    // 捕获后端返回的错误信息
+    if (error.response && error.response.data && error.response.data.msg) {
+      ElMessage.error(error.response.data.msg)
+    } else {
+      ElMessage.error('提交订单失败')
+    }
     console.error('Failed to submit order:', error)
   } finally {
     loading.value = false
@@ -280,9 +365,6 @@ const formatCountdown = (seconds) => {
 
 // 开始倒计时
 const startCountdown = () => {
-  // 重置倒计时为30秒，与后端延迟消息时间一致
-  countdownSeconds.value = 30
-  
   // 清除之前的定时器
   if (countdownTimer.value) {
     clearInterval(countdownTimer.value)
@@ -346,7 +428,7 @@ const goBack = () => {
 }
 
 onMounted(async () => {
-  loadOrderItems()
+  await loadOrderItems()
   await loadUserInfo()
   if (form.value.paymentMethod === '2') {
     await loadUserBalance()

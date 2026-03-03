@@ -9,7 +9,7 @@
       <el-select v-model="query.paymentMethod" placeholder="支付方式" clearable style="width: 120px" @change="loadList">
         <el-option label="支付宝" :value="0" />
         <el-option label="微信" :value="1" />
-        <el-option label="银行卡" :value="2" />
+        <el-option label="余额" :value="2" />
       </el-select>
       <el-button type="primary" @click="loadList">查询</el-button>
     </div>
@@ -77,7 +77,7 @@ const loading = ref(false)
 const paymentStats = ref({})
 const query = reactive({ orderId: null, status: null, paymentMethod: null, page: 1, pageSize: 10 })
 
-const paymentMethodMap = { 0: '支付宝', 1: '微信', 2: '银行卡' }
+const paymentMethodMap = { 0: '支付宝', 1: '微信', 2: '余额' }
 const paymentStatusMap = { 0: '待付款', 1: '已付款', 2: '已取消' }
 function paymentMethodText(v) {
   return paymentMethodMap[v] ?? '-'

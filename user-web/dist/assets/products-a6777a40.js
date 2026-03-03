@@ -1,1 +1,0 @@
-import{n as e}from"./index-fb86d7fa.js";function u(t){return e({url:"/user/products/recommended",method:"get"})}function o(t){return e({url:`/user/products/detail/${t}`,method:"get"})}function s(){return e({url:"/user/products/categories",method:"get"})}function c(t){return e({url:`/user/products/category/${t}`,method:"get"})}export{u as a,c as b,o as c,s as g};

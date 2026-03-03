@@ -50,6 +50,11 @@ public class OrderCreateMessageConsumer {
                     log.error("商品不存在：productId={}", item.getProductId());
                     throw new RuntimeException("商品不存在");
                 }
+                // 检查商品是否已下架
+                if (productVO.getStatus() == 0) {
+                    log.error("商品已下架：productId={}", item.getProductId());
+                    throw new RuntimeException("商品已下架");
+                }
                 // 检查库存是否足够
                 if (productVO.getStock() < item.getQuantity()) {
                     log.error("商品库存不足：productId={}, 库存={}, 需求={}", item.getProductId(), productVO.getStock(), item.getQuantity());
@@ -62,7 +67,7 @@ public class OrderCreateMessageConsumer {
                 log.info("减少商品库存：productId={}, 原库存={}, 减少数量={}, 新库存={}", item.getProductId(), oldStock, item.getQuantity(), newStock);
                 // 只有当库存从有到0时才发送消息
                 if (oldStock > 0 && newStock == 0) {
-                    sendStockUpdateMessage(item.getProductId(), newStock);
+                    sendStockUpdateMessage(item.getProductId(), newStock, productVO.getCategoryId());
                 }
             }
 
@@ -107,7 +112,7 @@ public class OrderCreateMessageConsumer {
             log.info("插入支付记录成功：paymentId={}, orderId={}", payment.getPaymentId(), orders.getOrderId());
             
             // 发送延迟消息，一定时间后检查订单是否支付
-            long delayTime = 10*  60 * 1000;
+            long delayTime = OrderStatus.PAYMENT_TIMEOUT_SECONDS * 1000L;
             HashMap<String, Object> message = new HashMap<>();
             message.put("orderId", orders.getOrderId());
             rabbitTemplate.convertAndSend(
@@ -127,11 +132,12 @@ public class OrderCreateMessageConsumer {
     }
 
     // 发送库存更新消息到RabbitMQ
-    private void sendStockUpdateMessage(Long productId, Integer stock) {
+    private void sendStockUpdateMessage(Long productId, Integer stock, Long categoryId) {
         try {
-            String message = "Product " + productId + " stock updated to " + stock;
+            // 构建包含商品ID、库存和分类ID的消息
+            String message = productId + "," + stock + "," + categoryId;
             rabbitTemplate.convertAndSend(RabbitMQConstant.STOCK_EXCHANGE_NAME, RabbitMQConstant.STOCK_ROUTING_KEY, message);
-            log.info("发送库存更新消息：productId={}, stock={}", productId, stock);
+            log.info("发送库存更新消息：productId={}, stock={}, categoryId={}", productId, stock, categoryId);
         } catch (Exception e) {
             log.error("发送库存更新消息失败：", e);
         }

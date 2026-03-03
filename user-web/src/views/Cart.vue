@@ -12,7 +12,8 @@
                 <div class="cart-item-details">
                   <router-link :to="`/product/${scope.row.productId}`" class="cart-item-name">{{ scope.row.productName }}</router-link>
                   <p class="cart-item-price">¥{{ scope.row.price }}</p>
-                  <p v-if="scope.row.stock <= 0" class="cart-item-out-of-stock">缺货（当前库存：{{ scope.row.stock }}）</p>
+                  <p v-if="scope.row.status == 0" class="cart-item-out-of-stock">商品已下架</p>
+                  <p v-else-if="scope.row.stock <= 0" class="cart-item-out-of-stock">缺货（当前库存：{{ scope.row.stock }}）</p>
                   <p v-else-if="scope.row.stock < scope.row.quantity" class="cart-item-out-of-stock">缺货（当前库存：{{ scope.row.stock }}）</p>
                   <p v-else-if="scope.row.stock == scope.row.quantity" class="cart-item-out-of-stock">库存紧张（当前库存：{{ scope.row.stock }}）</p>
                 </div>
@@ -26,6 +27,7 @@
                     v-model="scope.row.quantity" 
                     :min="0" 
                     :max="scope.row.quantity >= scope.row.stock ? scope.row.quantity : 99999" 
+                    :disabled="scope.row.status == 0" 
                     @change="(value) => {
                       handleQuantityChange(value, scope.row);
                       handleUpdateCartItem(scope.row);
@@ -169,10 +171,19 @@ const handleCheckout = () => {
     return
   }
   
-  // 检查选中的商品是否缺货
-  const outOfStockItems = selectedItems.value.filter(item => item.stock <= 0 || item.stock < item.quantity)
-  if (outOfStockItems.length > 0) {
-    ElMessage.warning('选中的商品中有缺货商品，无法结算')
+  // 检查选中的商品是否已下架或缺货
+  const invalidItems = selectedItems.value.filter(item => item.status == 0 || item.stock <= 0 || item.stock < item.quantity)
+  if (invalidItems.length > 0) {
+    const hasOutOfStock = invalidItems.some(item => item.stock <= 0 || item.stock < item.quantity)
+    const hasOffline = invalidItems.some(item => item.status == 0)
+    
+    if (hasOffline && hasOutOfStock) {
+      ElMessage.warning('选中的商品中有已下架或缺货商品，无法结算')
+    } else if (hasOffline) {
+      ElMessage.warning('选中的商品中有已下架商品，无法结算')
+    } else {
+      ElMessage.warning('选中的商品中有缺货商品，无法结算')
+    }
     return
   }
   

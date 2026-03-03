@@ -19,7 +19,7 @@ public interface OrdersService {
     PageResult myOrders(MyOrdersPageQueryDTO myOrdersPageQueryDTO);
 
     // 创建订单
-    Long createOrder(com.example.mailuser.dto.OrderCreateDTO orderCreateDTO);
+    com.example.mailuser.vo.OrderCreateResultVO createOrder(com.example.mailuser.dto.OrderCreateDTO orderCreateDTO);
 
     // 取消订单
     void cancelOrder(Long orderId);

@@ -120,10 +120,74 @@ public class ProductServiceImpl implements ProductService {
      * @return 商品列表
      */
     @Override
-    public List<ProductVO> getProductsByCategoryId(Integer categoryId) {
+    public List<ProductVO> getProductsByCategoryId(Long categoryId) {
+        // 生成分类商品缓存键
+        String categoryProductsCacheKey = "products:category:" + categoryId;
+        
+        // 尝试从Redis缓存中获取分类商品数据
+        try {
+            String productsJson = redisTemplate.opsForValue().get(categoryProductsCacheKey);
+            if (productsJson != null) {
+                log.info("从Redis缓存中获取分类商品数据，分类ID：{}", categoryId);
+                return JSON.parseArray(productsJson, ProductVO.class);
+            }
+        } catch (Exception e) {
+            log.error("Redis缓存读取失败：{}", e.getMessage());
+        }
+
+        // 从数据库中获取分类商品数据
         List<ProductVO> products = productMapper.getProductsByCategoryId(categoryId);
-        log.info("根据分类ID获取商品列表，分类ID：{}，商品数量：{}", categoryId, products.size());
+        log.info("从数据库中获取分类商品列表，分类ID：{}，商品数量：{}", categoryId, products.size());
+
+        // 将分类商品数据存入Redis缓存
+        try {
+            String productsJson = JSON.toJSONString(products);
+            redisTemplate.opsForValue().set(categoryProductsCacheKey, productsJson, CACHE_EXPIRE_TIME, TimeUnit.SECONDS);
+            log.info("分类商品数据已存入Redis缓存，分类ID：{}，过期时间：{}秒", categoryId, CACHE_EXPIRE_TIME);
+        } catch (Exception e) {
+            log.error("Redis缓存写入失败：{}", e.getMessage());
+        }
+
         return products;
+    }
+
+    /**
+     * 清除分类商品缓存
+     * @param categoryId 分类ID
+     */
+    public void clearCategoryProductsCache(Long categoryId) {
+        try {
+            String categoryProductsCacheKey = "products:category:" + categoryId;
+            redisTemplate.delete(categoryProductsCacheKey);
+            log.info("分类商品缓存已清除，分类ID：{}", categoryId);
+        } catch (Exception e) {
+            log.error("清除分类商品缓存失败：{}", e.getMessage());
+        }
+    }
+
+    /**
+     * 清除所有分类商品缓存
+     */
+    public void clearAllCategoryProductsCache() {
+        try {
+            // 使用通配符删除所有分类商品缓存
+            redisTemplate.delete(redisTemplate.keys("products:category:*"));
+            log.info("所有分类商品缓存已清除");
+        } catch (Exception e) {
+            log.error("清除所有分类商品缓存失败：{}", e.getMessage());
+        }
+    }
+
+    /**
+     * 清除分类列表缓存
+     */
+    public void clearCategoriesCache() {
+        try {
+            redisTemplate.delete(CATEGORIES_CACHE_KEY);
+            log.info("分类列表缓存已清除");
+        } catch (Exception e) {
+            log.error("清除分类列表缓存失败：{}", e.getMessage());
+        }
     }
 
     /**

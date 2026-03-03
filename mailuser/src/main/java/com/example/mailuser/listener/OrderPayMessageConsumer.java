@@ -47,14 +47,14 @@ public class OrderPayMessageConsumer {
                 // 再次检查订单是否存在且属于当前用户
                 if (order == null || !order.getUserId().equals(userId)) {
                     log.error("订单不存在：orderId={}, userId={}", payDTO.getOrderId(), userId);
-                    throw new RuntimeException("订单不存在");
+                    return; // 直接返回，不抛出异常
                 }
             }
             
             // 只有待支付的订单可以支付
             if (order.getOrderStatus() != OrderStatus.WAIT_PAYMENT) {
                 log.error("只能支付待支付的订单：orderId={}, orderStatus={}", order.getOrderId(), order.getOrderStatus());
-                throw new RuntimeException("只能支付待支付的订单");
+                return; // 直接返回，不抛出异常
             }
             
             // 如果是余额支付，检查余额是否足够
@@ -62,11 +62,16 @@ public class OrderPayMessageConsumer {
                 boolean isEnough = balanceService.checkBalance(userId, order.getTotalAmount());
                 if (!isEnough) {
                     log.error("余额不足：userId={}, amount={}", userId, order.getTotalAmount());
-                    throw new RuntimeException("余额不足");
+                    return; // 直接返回，不抛出异常
                 }
                 // 扣除余额
-                balanceService.decreaseBalance(userId, order.getTotalAmount());
-                log.info("余额支付成功：userId={}, amount={}", userId, order.getTotalAmount());
+                try {
+                    balanceService.decreaseBalance(userId, order.getTotalAmount());
+                    log.info("余额支付成功：userId={}, amount={}", userId, order.getTotalAmount());
+                } catch (Exception e) {
+                    log.error("扣除余额失败：userId={}, amount={}", userId, order.getTotalAmount(), e);
+                    return; // 直接返回，不抛出异常
+                }
             }
             
             // 更新订单状态为已支付，并更新支付方式

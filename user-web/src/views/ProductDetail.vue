@@ -39,6 +39,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getProductDetail } from '@/api/products'
 import { addToCart, getCartList } from '@/api/cart'
+import { prepurchase } from '@/api/orders'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()
@@ -77,31 +78,51 @@ const handleAddToCart = async () => {
     await addToCart({ productId: product.value.id, quantity: quantity.value })
     ElMessage.success('已加入购物车')
   } catch (error) {
-    // 捕获后端返回的库存不足错误
-    if (error.response && error.response.data && error.response.data.msg === '商品库存不足') {
-      ElMessage.warning('库存不足，无法添加到购物车')
+    // 捕获后端返回的错误信息
+    if (error.response && error.response.data && error.response.data.msg) {
+      ElMessage.error(error.response.data.msg)
     } else {
       ElMessage.error('加入购物车失败')
     }
+    // 跳转到首页
+    setTimeout(() => {
+      router.push('/')
+    }, 1500)
   }
 }
 
-const handleBuyNow = () => {
-  // 创建订单商品信息
-  const orderItem = {
-    productId: product.value.id,
-    productName: product.value.name,
-    price: product.value.price,
-    quantity: quantity.value,
-    imageUrl: product.value.imageUrl
+const handleBuyNow = async () => {
+  try {
+    // 先调用预下单接口检查商品状态
+    await prepurchase({ productId: product.value.id, quantity: quantity.value })
+    
+    // 商品状态正常，创建订单商品信息
+    const orderItem = {
+      productId: product.value.id,
+      productName: product.value.name,
+      price: product.value.price,
+      quantity: quantity.value,
+      imageUrl: product.value.imageUrl
+    }
+    
+    // 存储到本地存储，添加直接购买标记
+    localStorage.setItem('selectedCartItems', JSON.stringify([orderItem]))
+    localStorage.setItem('isDirectPurchase', 'true')
+    
+    // 跳转到订单确认页面
+    router.push('/order-confirm')
+  } catch (error) {
+    // 捕获后端返回的错误信息
+    if (error.response && error.response.data && error.response.data.msg) {
+      ElMessage.error(error.response.data.msg)
+    } else {
+      ElMessage.error('购买失败')
+    }
+    // 跳转到首页
+    setTimeout(() => {
+      router.push('/')
+    }, 1500)
   }
-  
-  // 存储到本地存储，添加直接购买标记
-  localStorage.setItem('selectedCartItems', JSON.stringify([orderItem]))
-  localStorage.setItem('isDirectPurchase', 'true')
-  
-  // 直接跳转到订单确认页面
-  router.push('/order-confirm')
 }
 
 onMounted(() => {
