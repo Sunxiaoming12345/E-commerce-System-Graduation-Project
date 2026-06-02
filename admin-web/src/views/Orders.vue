@@ -8,6 +8,8 @@
         <el-option label="已发货" :value="2" />
         <el-option label="已完成" :value="3" />
         <el-option label="已取消" :value="4" />
+        <el-option label="退款中" :value="5" />
+        <el-option label="已退款" :value="6" />
       </el-select>
       <el-button type="primary" @click="loadList">查询</el-button>
     </div>
@@ -28,7 +30,7 @@
       <el-table-column label="操作" width="120" fixed="right">
         <template #default="{ row }">
           <el-button type="primary" link @click="openDetail(row)">详情</el-button>
-          <el-button v-if="row.orderStatus !== 4" type="primary" link @click="openStatus(row)">改状态</el-button>
+          <el-button v-if="row.orderStatus <= 2" type="primary" link @click="openStatus(row)">改状态</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -54,8 +56,15 @@
           <el-descriptions-item label="金额">¥ {{ formatMoney(orderDetail.order.totalAmount) }}</el-descriptions-item>
           <el-descriptions-item label="收货人">{{ orderDetail.order.receiverName }} {{ orderDetail.order.receiverPhone }}</el-descriptions-item>
           <el-descriptions-item label="地址" :span="2">{{ orderDetail.order.shippingAddress }}</el-descriptions-item>
-          <el-descriptions-item label="下单时间">{{ orderDetail.order.createTime }}</el-descriptions-item>
-          <el-descriptions-item label="支付时间">{{ orderDetail.order.payTime || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="下单时间">{{ $fmt(orderDetail.order.createTime) }}</el-descriptions-item>
+          <el-descriptions-item label="支付时间">{{ $fmt(orderDetail.order.payTime) || '-' }}</el-descriptions-item>
+          <el-descriptions-item v-if="orderDetail.couponName" label="优惠券" :span="2">
+            <el-tag type="warning" effect="plain">
+              {{ orderDetail.couponName }}
+              <template v-if="orderDetail.couponType === 0">（满{{ orderDetail.couponMinAmount }}减{{ formatMoney(orderDetail.couponDiscount) }}）</template>
+              <template v-else>（{{ (orderDetail.couponDiscount * 10).toFixed(1) }}折）</template>
+            </el-tag>
+          </el-descriptions-item>
         </el-descriptions>
         <div class="detail-items">
           <div class="detail-title">商品明细</div>
@@ -111,25 +120,21 @@ const statusVisible = ref(false)
 const currentOrder = ref(null)
 const statusForm = reactive({ orderId: null, orderStatus: null, remark: '' })
 
-const statusMap = { 0: '待付款', 1: '已付款', 2: '已发货', 3: '已完成', 4: '已取消' }
+const statusMap = { 0: '待付款', 1: '已付款', 2: '已发货', 3: '已完成', 4: '已取消', 5: '退款中', 6: '已退款' }
 function orderStatusText(s) {
   return statusMap[s] ?? '-'
 }
 
 function getStatusType(status) {
   switch (status) {
-    case 0:
-      return 'warning'
-    case 1:
-      return 'success'
-    case 2:
-      return 'info'
-    case 3:
-      return 'success'
-    case 4:
-      return 'danger'
-    default:
-      return ''
+    case 0: return 'warning'
+    case 1: return 'success'
+    case 2: return 'info'
+    case 3: return 'success'
+    case 4: return 'danger'
+    case 5: return 'warning'
+    case 6: return 'info'
+    default: return ''
   }
 }
 
@@ -183,22 +188,42 @@ onMounted(loadList)
 </script>
 
 <style scoped>
-.orders-page .toolbar {
-  margin-bottom: 16px;
-  display: flex;
-  gap: 12px;
+.orders-page { animation: fade-in 0.25s var(--ease); }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.toolbar { margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* === Table === */
+.orders-page :deep(.el-table) {
+  --el-table-bg-color: #fff; --el-table-tr-bg-color: #fff;
+  --el-table-header-bg-color: #fafaf9; --el-table-row-hover-bg-color: #f5f3f0;
+  --el-table-border-color: #111; --el-table-text-color: #111;
+  --el-table-header-text-color: #111;
+  border: 3px solid #111; box-shadow: var(--shadow-hard);
 }
-.orders-page .pagination {
-  margin-top: 16px;
-  display: flex;
-  justify-content: flex-end;
+
+.orders-page :deep(.el-table th.el-table__cell) {
+  background: #111; color: #fff;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  border-bottom: 2px solid #111;
 }
-.detail-items {
-  margin-top: 16px;
+.orders-page :deep(.el-table td.el-table__cell) { border-bottom: 2px solid #e5e3e0; }
+
+.orders-page .pagination { margin-top: 20px; display: flex; justify-content: flex-end; }
+.orders-page :deep(.el-pager li) { border: 2px solid #111 !important; font-weight: 700 !important; }
+.orders-page :deep(.el-pager li.is-active) { background: #111 !important; color: #fff !important; }
+
+.detail-items { margin-top: 20px; }
+.detail-title { font-family: var(--font-display); font-size: 16px; color: #111; margin-bottom: 10px; }
+
+/* === Dialogs === */
+.orders-page :deep(.el-dialog) {
+  --el-dialog-bg-color: #fff; border: 3px solid #111;
+  box-shadow: var(--shadow-hard-lg); border-radius: 0;
 }
-.detail-title {
-  margin-bottom: 8px;
-  font-weight: 600;
-  color: #1a202c;
-}
+.orders-page :deep(.el-dialog__header) { background: #111; padding: 16px 24px; margin: 0; }
+.orders-page :deep(.el-dialog__title) { color: #fff; font-weight: 700; }
+.orders-page :deep(.el-dialog__headerbtn .el-icon) { color: #fff; }
+.orders-page :deep(.el-dialog__body) { padding: 24px; }
+.orders-page :deep(.el-dialog__footer) { border-top: 3px solid #111; padding: 16px 24px; }
 </style>

@@ -7,8 +7,7 @@ import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
 @ComponentScan(basePackages = {
-        "com.example.mailadmin",   // 主模块
-        "com.example.config"       // common 中的配置
+        "com.example"   // 扫描所有子包（mailadmin + common 下的 config/utils/interceptor/handler 等）
 })
 public class MailadminApplication {
 

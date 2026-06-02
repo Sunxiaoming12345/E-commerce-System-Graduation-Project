@@ -7,9 +7,7 @@ import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
 @ComponentScan(basePackages = {
-        "com.example.mailuser",   // 主模块
-        "com.example.config",      // common 中的配置
-        "com.example.handler"      // common 中的全局异常处理器
+        "com.example"   // 扫描所有子包（mailuser/mailadmin + common 下的 config/utils/interceptor/handler 等）
 })
 @MapperScan({"com.example.mailadmin.mapper","com.example.mailuser.mapper"})
 public class MailuserApplication {

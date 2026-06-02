@@ -106,7 +106,35 @@ onMounted(loadList)
 </script>
 
 <style scoped>
-.categories-page .toolbar {
-  margin-bottom: 16px;
+.categories-page { animation: fade-in 0.25s var(--ease); }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.toolbar { margin-bottom: 20px; }
+
+/* === Table === */
+.categories-page :deep(.el-table) {
+  --el-table-bg-color: #fff; --el-table-tr-bg-color: #fff;
+  --el-table-header-bg-color: #fafaf9; --el-table-row-hover-bg-color: #f5f3f0;
+  --el-table-border-color: #111; --el-table-text-color: #111;
+  --el-table-header-text-color: #111;
+  border: 3px solid #111; box-shadow: var(--shadow-hard);
 }
+
+.categories-page :deep(.el-table th.el-table__cell) {
+  background: #111; color: #fff;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  border-bottom: 2px solid #111;
+}
+.categories-page :deep(.el-table td.el-table__cell) { border-bottom: 2px solid #e5e3e0; }
+
+/* === Dialog === */
+.categories-page :deep(.el-dialog) {
+  --el-dialog-bg-color: #fff; border: 3px solid #111;
+  box-shadow: var(--shadow-hard-lg); border-radius: 0;
+}
+.categories-page :deep(.el-dialog__header) { background: #111; padding: 16px 24px; margin: 0; }
+.categories-page :deep(.el-dialog__title) { color: #fff; font-weight: 700; }
+.categories-page :deep(.el-dialog__headerbtn .el-icon) { color: #fff; }
+.categories-page :deep(.el-dialog__body) { padding: 24px; }
+.categories-page :deep(.el-dialog__footer) { border-top: 3px solid #111; padding: 16px 24px; }
 </style>

@@ -20,7 +20,9 @@ const routes = [
             { path: 'order-confirm', name: 'OrderConfirm', component: () => import('@/views/OrderConfirm.vue'), meta: { title: '确认订单' } },
             { path: 'orders', name: 'Orders', component: () => import('@/views/Orders.vue'), meta: { title: '我的订单' } },
             { path: 'order-detail/:id', name: 'OrderDetail', component: () => import('@/views/OrderDetail.vue'), meta: { title: '订单详情' } },
-            { path: 'profile', name: 'Profile', component: () => import('@/views/Profile.vue'), meta: { title: '个人中心' } }
+            { path: 'profile', name: 'Profile', component: () => import('@/views/Profile.vue'), meta: { title: '个人中心' } },
+            { path: 'coupons', name: 'MyCoupons', component: () => import('@/views/MyCoupons.vue'), meta: { title: '我的优惠券' } },
+            { path: 'refunds', name: 'MyRefunds', component: () => import('@/views/Refunds.vue'), meta: { title: '我的退款' } }
         ]
     }
 ]

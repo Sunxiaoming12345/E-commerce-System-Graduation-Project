@@ -49,9 +49,19 @@ public class OrderCreateDTO {
     private Integer paymentMethod;
 
     /**
+     * 幂等令牌，防止重复提交
+     */
+    private String idempotentToken;
+
+    /**
      * 订单总金额
      */
     private BigDecimal totalAmount;
+
+    /**
+     * 用户优惠券ID（可选）
+     */
+    private Long userCouponId;
 
     /**
      * 订单商品项DTO

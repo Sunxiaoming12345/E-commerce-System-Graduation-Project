@@ -37,4 +37,13 @@ public interface UserPaymentMapper {
      */
     int updateStatus(@Param("paymentId") Long paymentId, @Param("status") Integer status);
 
+    /**
+     * 更新支付金额
+     *
+     * @param paymentId 支付ID
+     * @param amount 支付金额
+     * @return 影响行数
+     */
+    int updateAmount(@Param("paymentId") Long paymentId, @Param("amount") java.math.BigDecimal amount);
+
 }

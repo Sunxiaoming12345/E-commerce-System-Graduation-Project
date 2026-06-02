@@ -1,13 +1,26 @@
 server:
   address: 0.0.0.0
   port: 8081
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
 
 spring:
+  jackson:
+    time-zone: Asia/Shanghai
   datasource:
-    url: jdbc:mysql://localhost:3306/bysj?useUnicode=true&characterEncoding=utf8&serverTimezone=GMT%2B8
+    url: jdbc:mysql://192.168.100.1:3306/bysj?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8
     username: root
     password: 1234
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      connection-timeout: 5000
+      idle-timeout: 300000
+      max-lifetime: 600000
   application:
     name: mailadmin
   cloud:

@@ -28,4 +28,18 @@ public class RabbitMQConstant {
     // 订单支付路由键
     public static final String ORDER_PAY_ROUTING_KEY = "order.pay.routing.key";
 
+    // 死信交换机
+    public static final String DEAD_LETTER_EXCHANGE = "dead.letter.exchange";
+    // 死信队列
+    public static final String DEAD_LETTER_QUEUE = "dead.letter.queue";
+    // 死信路由键
+    public static final String DEAD_LETTER_ROUTING_KEY = "dead.letter.routing.key";
+
+    // 退款交换机
+    public static final String REFUND_EXCHANGE_NAME = "refund.exchange";
+    // 退款队列
+    public static final String REFUND_QUEUE_NAME = "refund.queue";
+    // 退款路由键
+    public static final String REFUND_ROUTING_KEY = "refund.routing.key";
+
 }

@@ -11,8 +11,11 @@ import com.example.mailuser.entity.Orders;
 import com.example.mailuser.mapper.ProductMapper;
 import com.example.mailuser.mapper.UserOrdersMapper;
 import com.example.mailuser.service.BalanceService;
+import com.example.mailuser.mapper.CouponMapper;
+import com.example.mailuser.service.CouponService;
 import com.example.mailuser.service.OrdersService;
 import com.example.mailuser.utils.OrderNumberUtils;
+import com.example.utils.IdempotentUtil;
 import com.example.mailuser.vo.PrePurchaseVO;
 import com.example.mailuser.vo.UserOrderStatsVO;
 import com.example.result.PageResult;
@@ -79,10 +82,19 @@ public class OrdersServiceImpl implements OrdersService {
     private BalanceService balanceService;
 
     @Autowired
+    private CouponService couponService;
+
+    @Autowired
+    private CouponMapper couponMapper;
+
+    @Autowired
     private RabbitTemplate rabbitTemplate;
 
     @Autowired
     private UserPaymentMapper userPaymentMapper;
+
+    @Autowired
+    private IdempotentUtil idempotentUtil;
 
     // 支付
     @Override
@@ -95,10 +107,16 @@ public class OrdersServiceImpl implements OrdersService {
         payDTO.setUserId(userId);
 
         // 余额支付：发 MQ 前同步校验，否则接口永远成功而异步消费端余额不足时静默失败
+        // 异步下单可能存在延迟，重试 10 次（共约 5 秒）
         if (Objects.equals(2, payDTO.getPaymentMethod())) {
-            Orders order = resolveOrderForPayment(payDTO, userId);
+            Orders order = null;
+            for (int i = 0; i < 10; i++) {
+                order = resolveOrderForPayment(payDTO, userId);
+                if (order != null) break;
+                try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+            }
             if (order == null) {
-                throw new RuntimeException("订单不存在");
+                throw new RuntimeException("订单处理中，请稍后支付");
             }
             if (!Objects.equals(order.getUserId(), userId)) {
                 throw new RuntimeException("订单不存在");
@@ -136,6 +154,11 @@ public class OrdersServiceImpl implements OrdersService {
 
     @Override
     public com.example.mailuser.vo.OrderCreateResultVO createOrder(com.example.mailuser.dto.OrderCreateDTO orderCreateDTO) {
+        // 幂等性校验：消费一次性提交令牌，防止重复点击创建多笔订单
+        if (!idempotentUtil.consumeToken("submit-order", orderCreateDTO.getIdempotentToken())) {
+            throw new RuntimeException("请勿重复提交订单");
+        }
+
         Long userId = BaseContext.getCurrentId();
         log.info("创建订单：userId={}, orderData={}", userId, orderCreateDTO);
 
@@ -205,6 +228,9 @@ public class OrdersServiceImpl implements OrdersService {
             userPaymentMapper.updateStatus(payment.getPaymentId(), 2); // 2-已取消
             log.info("支付记录已取消：paymentId={}, orderId={}", payment.getPaymentId(), orderId);
         }
+
+        // 释放已使用的优惠券
+        couponService.releaseCoupon(orderId);
     }
 
     @Override
@@ -246,7 +272,19 @@ public class OrdersServiceImpl implements OrdersService {
         com.example.mailuser.vo.OrderDetailVO orderDetailVO = new com.example.mailuser.vo.OrderDetailVO();
         orderDetailVO.setOrder(order);
         orderDetailVO.setOrderItems(orderItemVOs);
-        
+
+        // 查询订单使用的优惠券
+        com.example.mailuser.vo.CouponVO couponVO = couponMapper.selectCouponByOrderId(orderId);
+        if (couponVO != null) {
+            orderDetailVO.setCouponName(couponVO.getName());
+            orderDetailVO.setCouponType(couponVO.getType());
+            orderDetailVO.setCouponDiscount(couponVO.getDiscountValue());
+        }
+
+        // 查询支付记录
+        Payments payment = userPaymentMapper.getByOrderId(orderId);
+        orderDetailVO.setPayment(payment);
+
         // 计算支付剩余时间（秒）
         if (order.getOrderStatus() == OrderStatus.WAIT_PAYMENT) {
             // 支付超时时间：订单创建时间 + 支付超时时间常量

@@ -123,34 +123,45 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.payments-page .toolbar {
-  margin-bottom: 16px;
-  display: flex;
-  gap: 12px;
-}
-.stats-row {
-  margin-bottom: 20px;
-}
+.payments-page { animation: fade-in 0.25s var(--ease); }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.toolbar { margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+
+.stats-row { margin-bottom: 24px; }
+
 .stat-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 1px 3px rgba(0,0,0,.08);
-  border-left: 4px solid #5eead4;
+  background: #fff; border: 3px solid #111;
+  padding: 18px 22px;
+  box-shadow: var(--shadow-hard-sm);
+  transition: box-shadow 0.1s, transform 0.1s;
 }
-.stat-label {
-  font-size: 13px;
-  color: #64748b;
-  margin-bottom: 6px;
+
+.stat-card:hover {
+  box-shadow: 5px 5px 0 #111;
+  transform: translate(-2px, -2px);
 }
-.stat-value {
-  font-size: 18px;
-  font-weight: 700;
-  color: #1a202c;
+
+.stat-label { font-size: 10px; color: #999; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+.stat-value { font-family: var(--font-display); font-size: 22px; color: #111; }
+
+/* === Table === */
+.payments-page :deep(.el-table) {
+  --el-table-bg-color: #fff; --el-table-tr-bg-color: #fff;
+  --el-table-header-bg-color: #fafaf9; --el-table-row-hover-bg-color: #f5f3f0;
+  --el-table-border-color: #111; --el-table-text-color: #111;
+  --el-table-header-text-color: #111;
+  border: 3px solid #111; box-shadow: var(--shadow-hard);
 }
-.payments-page .pagination {
-  margin-top: 16px;
-  display: flex;
-  justify-content: flex-end;
+
+.payments-page :deep(.el-table th.el-table__cell) {
+  background: #111; color: #fff;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  border-bottom: 2px solid #111;
 }
+.payments-page :deep(.el-table td.el-table__cell) { border-bottom: 2px solid #e5e3e0; }
+
+.payments-page .pagination { margin-top: 20px; display: flex; justify-content: flex-end; }
+.payments-page :deep(.el-pager li) { border: 2px solid #111 !important; font-weight: 700 !important; }
+.payments-page :deep(.el-pager li.is-active) { background: #111 !important; color: #fff !important; }
 </style>

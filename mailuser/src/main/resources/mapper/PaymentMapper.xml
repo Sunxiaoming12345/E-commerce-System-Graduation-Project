@@ -16,7 +16,14 @@
     <!-- 更新支付状态 -->
     <update id="updateStatus">
         update payments
-        set status = #{status}
+        set status = #{status}, pay_time = NOW()
+        where payment_id = #{paymentId}
+    </update>
+
+    <!-- 更新支付金额 -->
+    <update id="updateAmount">
+        update payments
+        set amount = #{amount}
         where payment_id = #{paymentId}
     </update>
 

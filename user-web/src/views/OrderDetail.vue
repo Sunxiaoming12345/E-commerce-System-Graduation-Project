@@ -1,486 +1,251 @@
 <template>
-  <div class="order-detail">
-    <h2>订单详情</h2>
-    <el-loading v-loading="loading" element-loading-text="加载中...">
-      <div v-if="order" class="order-content">
-        <!-- 订单基本信息 -->
-        <div class="section">
-          <h3>订单信息</h3>
-          <div class="order-info">
-            <div class="info-item">
-              <span class="label">订单号:</span>
-              <span class="value">{{ order.order.orderNumber }}</span>
+  <div class="order-detail-page">
+    <div class="container" v-if="order">
+      <div class="top-bar">
+        <el-button link @click="router.push('/orders')">
+          <el-icon><ArrowLeft /></el-icon> 返回订单列表
+        </el-button>
+        <h2>订单详情</h2>
+      </div>
+
+      <!-- Status Timeline -->
+      <div class="timeline-section">
+        <div class="timeline">
+          <div
+            v-for="(step, idx) in steps" :key="idx"
+            class="t-step" :class="{ active: step.active, done: step.done }"
+          >
+            <div class="t-dot">
+              <el-icon v-if="step.done" :size="14"><Check /></el-icon>
+              <span v-else-if="step.active" class="dot-fill" />
+              <span v-else class="dot-empty" />
             </div>
-            <div class="info-item">
-              <span class="label">订单状态:</span>
-              <el-tag :type="getStatusType(order.order.orderStatus)">{{ getStatusText(order.order.orderStatus) }}</el-tag>
-            </div>
-            <div class="info-item">
-              <span class="label">下单时间:</span>
-              <span class="value">{{ order.order.createTime }}</span>
-            </div>
-            <div class="info-item">
-              <span class="label">支付方式:</span>
-              <span class="value">{{ getPaymentMethodText(order.order.paymentMethod) }}</span>
-            </div>
+            <div class="t-label">{{ step.label }}</div>
+            <div class="t-time" v-if="step.time">{{ step.time }}</div>
           </div>
         </div>
+      </div>
 
-        <!-- 收货信息 -->
-        <div class="section">
-          <h3>收货信息</h3>
-          <div class="shipping-info">
-            <div class="info-item">
-              <span class="label">收货人:</span>
-              <span class="value">{{ order.order.receiverName }}</span>
-            </div>
-            <div class="info-item">
-              <span class="label">联系电话:</span>
-              <span class="value">{{ order.order.receiverPhone }}</span>
-            </div>
-            <div class="info-item">
-              <span class="label">收货地址:</span>
-              <span class="value">{{ order.order.shippingAddress }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 商品信息 -->
-        <div class="section">
-          <h3>商品信息</h3>
-          <div class="product-info">
-            <div class="product-header">
-              <div class="header-item product-column">商品</div>
-              <div class="header-item price-column">单价</div>
-              <div class="header-item quantity-column">数量</div>
-              <div class="header-item subtotal-column">小计</div>
-            </div>
-            <div v-for="(item, index) in order.orderItems || []" :key="item.itemId" class="product-item" :class="{ 'even': index % 2 === 1 }">
-              <div class="product-column">
-                <img v-if="item.imageUrl" :src="item.imageUrl" style="width: 60px; height: 60px; object-fit: cover; margin-right: 10px;" />
-                <span v-else style="margin-right: 10px; width: 60px; display: inline-block;">-</span>
-                {{ item.productName }}
+      <div class="content-grid">
+        <!-- Left -->
+        <div class="main-col">
+          <!-- Products -->
+          <div class="card">
+            <h3>商品信息</h3>
+            <div class="product-row" v-for="item in order.orderItems || []" :key="item.itemId">
+              <img v-if="item.imageUrl" :src="item.imageUrl" class="p-img" />
+              <div class="p-info">
+                <span class="p-name">{{ item.productName }}</span>
+                <span class="p-price">&yen;{{ item.productPrice?.toFixed(2) }} &times; {{ item.quantity }}</span>
               </div>
-              <div class="price-column">¥{{ item.productPrice.toFixed(2) }}</div>
-              <div class="quantity-column">{{ item.quantity }}</div>
-              <div class="subtotal-column">¥{{ item.subtotal.toFixed(2) }}</div>
+              <span class="p-subtotal">&yen;{{ item.subtotal?.toFixed(2) }}</span>
+            </div>
+          </div>
+
+          <!-- Shipping -->
+          <div class="card">
+            <h3>收货信息</h3>
+            <div class="info-grid">
+              <div><span class="lbl">收货人</span> {{ order.order.receiverName }}</div>
+              <div><span class="lbl">电话</span> {{ order.order.receiverPhone }}</div>
+              <div><span class="lbl">地址</span> {{ order.order.shippingAddress }}</div>
             </div>
           </div>
         </div>
 
-        <!-- 支付方式 -->
-        <div class="section" v-if="order.order.orderStatus === 0">
-          <h3>支付方式</h3>
-          <div class="payment-method">
-            <el-radio-group v-model="paymentMethod">
-              <el-radio label="2">余额支付</el-radio>
-              <el-radio label="0">支付宝</el-radio>
-              <el-radio label="1">微信支付</el-radio>
-            </el-radio-group>
+        <!-- Right -->
+        <div class="side-col">
+          <div class="card">
+            <h3>订单信息</h3>
+            <div class="info-grid">
+              <div><span class="lbl">订单号</span> <code>{{ order.order.orderNumber }}</code></div>
+              <div><span class="lbl">下单时间</span> {{ $fmt(order.order.createTime) }}</div>
+              <div>
+                <span class="lbl">支付方式</span>
+                {{ ['支付宝','微信','余额'][order.order.paymentMethod] || '--' }}
+              </div>
+              <div v-if="order.payment">
+                <span class="lbl">支付时间</span>
+                {{ $fmt(order.payment.payTime) || '--' }}
+              </div>
+              <div v-if="order.payment">
+                <span class="lbl">支付状态</span>
+                <el-tag :type="['warning','success','danger'][order.payment.status]" size="small">
+                  {{ ['待付款','已付款','已取消'][order.payment.status] || '--' }}
+                </el-tag>
+              </div>
+              <div v-if="order.couponName">
+                <span class="lbl">优惠券</span>
+                <span class="coupon-info">{{ order.couponName }}
+                  <template v-if="order.couponType === 0">（满{{ order.couponMinAmount }}减{{ order.couponDiscount }}）</template>
+                  <template v-else>（{{ (order.couponDiscount * 10).toFixed(1) }}折）</template>
+                </span>
+              </div>
+              <div>
+                <span class="lbl">订单金额</span>
+                <strong class="price">&yen;{{ order.order.totalAmount?.toFixed(2) }}</strong>
+              </div>
+            </div>
           </div>
-          <div class="countdown-section">
-            <span class="countdown-label">支付剩余时间：</span>
-            <span class="countdown-time" :class="{ 'warning': countdownSeconds < 15, 'danger': countdownSeconds < 5 }">
+
+          <!-- Payment countdown -->
+          <div class="card countdown-card" v-if="order.order.orderStatus === 0">
+            <h3>支付剩余时间</h3>
+            <div class="countdown-display" :class="{ warn: countdownSeconds < 300, danger: countdownSeconds < 60 }">
               {{ formatCountdown(countdownSeconds) }}
-            </span>
-          </div>
-        </div>
-
-        <!-- 订单金额 -->
-        <div class="section">
-          <h3>订单金额</h3>
-          <div class="amount-info">
-            <div class="info-item">
-              <span class="label">订单总金额:</span>
-              <span class="value price">¥{{ order.order.totalAmount.toFixed(2) }}</span>
             </div>
+            <div class="pay-methods">
+              <el-radio-group v-model="paymentMethod">
+                <el-radio label="2">余额</el-radio>
+                <el-radio label="0">支付宝</el-radio>
+                <el-radio label="1">微信</el-radio>
+              </el-radio-group>
+            </div>
+            <el-button type="primary" size="large" style="width:100%" @click="handlePay">确认支付</el-button>
+            <el-button size="large" style="width:100%;margin-top:8px" @click="handleCancel">取消订单</el-button>
           </div>
         </div>
+      </div>
+    </div>
 
-        <!-- 操作按钮 -->
-        <div class="order-actions">
-          <el-button @click="goBack">返回订单列表</el-button>
-          <el-button v-if="order.order.orderStatus === 0" type="success" @click="handlePayOrder(order.order.orderId, paymentMethod)">支付</el-button>
-          <el-button v-if="order.order.orderStatus === 0" type="danger" @click="handleCancelOrder(order.order.orderId)">取消</el-button>
-        </div>
-      </div>
-      <div v-else class="empty">
-        <el-empty description="订单不存在" />
-      </div>
-    </el-loading>
+    <el-empty v-else description="订单不存在" />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getOrderDetail, payOrder, cancelOrder } from '@/api/orders'
-import { getProductDetail } from '@/api/products'
+import { ArrowLeft, Check } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
-const orderId = route.params.id
 const order = ref(null)
-const loading = ref(true)
-const paymentMethod = ref('2') // 默认余额支付
+const paymentMethod = ref('2')
+const countdownSeconds = ref(0)
+let timer = null
 
-// 倒计时相关
-const countdownSeconds = ref(600) // 10分钟，与后端延迟消息时间一致
-const countdownTimer = ref(null)
+const statusOrder = [0, 1, 2, 3]
+const statusLabels = ['待支付', '已付款', '已发货', '已完成']
+const steps = computed(() => {
+  const s = order.value?.order?.orderStatus
+  return statusOrder.map((v, i) => ({
+    label: statusLabels[i],
+    active: s === v,
+    done: s > v || (s === 4 && false),
+    time: s === v ? order.value?.order?.createTime : ''
+  }))
+})
 
-const loadOrderDetail = async () => {
+const formatCountdown = (s) => {
+  const m = Math.floor(s / 60), sec = s % 60
+  return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`
+}
+
+const load = async () => {
   try {
-    loading.value = true
-    const res = await getOrderDetail(orderId)
+    const res = await getOrderDetail(route.params.id)
     order.value = res
-    // 打印订单详情数据结构，用于调试
-    console.log('Order detail:', res)
-    if (res.orderItems) {
-      console.log('Order items:', res.orderItems)
-      if (res.orderItems.length > 0) {
-        console.log('First order item:', res.orderItems[0])
-        console.log('First order item keys:', Object.keys(res.orderItems[0]))
-      }
-    }
-    
-    // 如果订单状态是待付款，开始倒计时
-    if (res.order.orderStatus === 0) {
-      // 从后端获取支付剩余时间
-      if (res.paymentRemainingTime) {
-        countdownSeconds.value = res.paymentRemainingTime
-        console.log('Using payment remaining time from backend:', res.paymentRemainingTime)
-      }
+    if (res.order.orderStatus === 0 && res.paymentRemainingTime) {
+      countdownSeconds.value = res.paymentRemainingTime
       startCountdown()
-    } else {
-      // 清除倒计时
-      clearCountdown()
     }
-  } catch (error) {
-    console.error('Failed to load order detail:', error)
-    ElMessage.error('加载订单详情失败')
-  } finally {
-    loading.value = false
-  }
+  } catch { ElMessage.error('加载失败') }
 }
 
-const getStatusType = (status) => {
-  switch (status) {
-    case 0:
-      return 'warning'
-    case 1:
-      return 'success'
-    case 2:
-      return 'info'
-    case 3:
-      return 'success'
-    case 4:
-      return 'danger'
-    default:
-      return ''
-  }
-}
-
-const getStatusText = (status) => {
-  switch (status) {
-    case 0:
-      return '待支付'
-    case 1:
-      return '已付款'
-    case 2:
-      return '已发货'
-    case 3:
-      return '已完成'
-    case 4:
-      return '已取消'
-    default:
-      return status
-  }
-}
-
-const getPaymentMethodText = (method) => {
-  switch (method) {
-    case 0:
-      return '支付宝'
-    case 1:
-      return '微信'
-    case 2:
-      return '余额'
-    default:
-      return '其他'
-  }
-}
-
-// 格式化倒计时显示
-const formatCountdown = (seconds) => {
-  const minutes = Math.floor(seconds / 60)
-  const secs = seconds % 60
-  return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-}
-
-// 开始倒计时
 const startCountdown = () => {
-  // 清除之前的定时器
-  if (countdownTimer.value) {
-    clearInterval(countdownTimer.value)
-  }
-  
-  // 开始倒计时
-  countdownTimer.value = setInterval(() => {
-    if (countdownSeconds.value > 0) {
-      countdownSeconds.value--
-    } else {
-      // 倒计时结束
-      clearCountdown()
-      ElMessage.warning('订单支付超时，已自动取消')
-      router.push('/orders')
-    }
+  clearInterval(timer)
+  timer = setInterval(() => {
+    if (countdownSeconds.value > 0) countdownSeconds.value--
+    else { clearInterval(timer); ElMessage.warning('订单已超时'); router.push('/orders') }
   }, 1000)
 }
 
-// 清除倒计时
-const clearCountdown = () => {
-  if (countdownTimer.value) {
-    clearInterval(countdownTimer.value)
-    countdownTimer.value = null
-  }
-}
-
-const handlePayOrder = async (id, method) => {
+const handlePay = async () => {
   try {
-    // 先从后端获取最新的订单状态
-    const latestOrder = await getOrderDetail(id)
-    
-    // 检查订单状态
-    if (latestOrder.order.orderStatus !== 0) {
-      ElMessage.warning('订单状态已发生改变，无法支付')
-      router.push('/orders')
-      return
-    }
-    
-    // 执行支付操作
-    await payOrder({ 
-      orderId: id, 
-      paymentMethod: parseInt(method) 
-    })
-    ElMessage.success('支付成功')
-    // 清除倒计时
-    clearCountdown()
-    loadOrderDetail()
-  } catch (error) {
-    console.error('支付失败:', error)
-    ElMessage.error('支付失败')
-  }
+    await payOrder({ orderId: order.value.order.orderId, paymentMethod: parseInt(paymentMethod.value) })
+    ElMessage.success('支付成功'); clearInterval(timer); load()
+  } catch { ElMessage.error('支付失败') }
 }
-
-const handleCancelOrder = async (id) => {
+const handleCancel = async () => {
   try {
-    // 先从后端获取最新的订单状态
-    const latestOrder = await getOrderDetail(id)
-    
-    // 检查订单状态
-    if (latestOrder.order.orderStatus !== 0) {
-      ElMessage.warning('订单状态已发生改变，无法取消')
-      router.push('/orders')
-      return
-    }
-    
-    // 执行取消操作
-    await cancelOrder(id)
-    ElMessage.success('订单已取消')
-    // 清除倒计时
-    clearCountdown()
-    loadOrderDetail()
-  } catch (error) {
-    console.error('取消订单失败:', error)
-    ElMessage.error('取消订单失败')
-  }
+    await cancelOrder(order.value.order.orderId)
+    ElMessage.success('已取消'); clearInterval(timer); router.push('/orders')
+  } catch { ElMessage.error('取消失败') }
 }
 
-const goBack = () => {
-  router.push('/orders')
-}
-
-onMounted(() => {
-  loadOrderDetail()
-})
+onMounted(load)
+onUnmounted(() => clearInterval(timer))
 </script>
 
 <style scoped>
-.order-detail {
-  padding: 20px 0;
-}
+.order-detail-page { padding: 0; }
+.container { max-width: 900px; margin: 0 auto; padding: 0 20px; }
 
-.order-detail h2 {
-  margin-bottom: 30px;
-  color: #333;
-}
+.top-bar { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+.top-bar h2 { font-size: 20px; font-weight: 700; }
 
-.order-content {
-  max-width: 800px;
-  margin: 0 auto;
+/* Timeline */
+.timeline-section {
+  background: var(--surface); border-radius: var(--radius);
+  padding: 28px 32px; border: 1px solid var(--border); margin-bottom: 20px;
 }
+.timeline { display: flex; justify-content: space-between; }
+.t-step { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; text-align: center; }
+.t-dot {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--border); background: var(--surface);
+  position: relative;
+}
+.t-step.done .t-dot { background: var(--primary); border-color: var(--primary); color: #fff; }
+.t-step.active .t-dot { border-color: var(--primary); }
+.t-step:not(:last-child) .t-dot::after {
+  content: ''; position: absolute; left: 100%; top: 50%;
+  width: calc(100% + 60px); height: 2px;
+  background: var(--border); z-index: 0;
+}
+.t-step.done .t-dot::after { background: var(--primary); }
+.dot-fill { width: 12px; height: 12px; background: var(--primary); border-radius: 50%; }
+.dot-empty { width: 8px; height: 8px; background: #cbd5e1; border-radius: 50%; }
+.t-label { font-size: 13px; font-weight: 500; color: var(--text); }
+.t-step.done .t-label { color: var(--primary); }
+.t-step.active .t-label { color: var(--primary); font-weight: 600; }
+.t-time { font-size: 11px; color: var(--text-secondary); }
 
-.section {
-  margin-bottom: 30px;
-  padding: 20px;
-  border: 1px solid #eaeaea;
-  border-radius: 8px;
-}
+/* Content */
+.content-grid { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
 
-.section h3 {
-  margin-bottom: 20px;
-  font-size: 16px;
-  color: #333;
-  border-bottom: 1px solid #eaeaea;
-  padding-bottom: 10px;
+.card {
+  background: var(--surface); border-radius: var(--radius);
+  border: 1px solid var(--border); padding: 20px 24px; margin-bottom: 16px;
 }
+.card h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
 
-.info-item {
-  display: flex;
-  margin-bottom: 15px;
-  align-items: flex-start;
-}
+.info-grid { display: flex; flex-direction: column; gap: 12px; font-size: 14px; }
+.info-grid .lbl { color: var(--text-secondary); margin-right: 4px; }
+.price { color: var(--danger); font-size: 18px; }
 
-.label {
-  width: 100px;
-  font-size: 14px;
-  color: #666;
+/* Products */
+.product-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
 }
+.product-row:last-child { border: none; }
+.p-img { width: 56px; height: 56px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
+.p-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.p-name { font-size: 14px; color: var(--text); }
+.p-price { font-size: 13px; color: var(--text-secondary); }
+.p-subtotal { font-size: 15px; font-weight: 600; color: var(--danger); flex-shrink: 0; }
 
-.value {
-  flex: 1;
-  font-size: 14px;
-  color: #333;
+/* Countdown */
+.countdown-display {
+  font-size: 36px; font-weight: 800; text-align: center;
+  padding: 16px 0; color: var(--primary-dark);
 }
-
-.value.price {
-  color: #ff4d4f;
-  font-weight: 500;
-}
-
-.order-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 15px;
-  margin-top: 40px;
-}
-
-.empty {
-  min-height: 400px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* 商品信息样式 */
-.product-info {
-  border: 1px solid #eaeaea;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.product-header {
-  display: flex;
-  background-color: #f5f5f5;
-  padding: 10px 20px;
-  border-bottom: 1px solid #eaeaea;
-}
-
-.header-item {
-  font-weight: 500;
-  color: #333;
-}
-
-.product-column {
-  flex: 1;
-  display: flex;
-  align-items: center;
-}
-
-.price-column {
-  width: 100px;
-  text-align: center;
-}
-
-.quantity-column {
-  width: 80px;
-  text-align: center;
-}
-
-.subtotal-column {
-  width: 100px;
-  text-align: center;
-}
-
-.product-item {
-  display: flex;
-  padding: 15px 20px;
-  border-bottom: 1px solid #eaeaea;
-  align-items: center;
-}
-
-.product-item:last-child {
-  border-bottom: none;
-}
-
-.product-item.even {
-  background-color: #f9f9f9;
-}
-
-.product-item img {
-  vertical-align: middle;
-}
-
-.product-item .product-column {
-  font-size: 14px;
-  color: #333;
-}
-
-.product-item .price-column,
-.product-item .quantity-column,
-.product-item .subtotal-column {
-  font-size: 14px;
-  color: #333;
-}
-
-/* 倒计时样式 */
-.countdown-section {
-  margin-top: 20px;
-  padding-top: 15px;
-  border-top: 1px solid #eaeaea;
-}
-
-.countdown-label {
-  font-size: 14px;
-  color: #666;
-  margin-right: 10px;
-}
-
-.countdown-time {
-  font-weight: bold;
-  color: #1890ff;
-  font-size: 18px;
-}
-
-.countdown-time.warning {
-  color: #faad14;
-}
-
-.countdown-time.danger {
-  color: #ff4d4f;
-  animation: pulse 1s infinite;
-}
-
-@keyframes pulse {
-  0% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-  100% {
-    opacity: 1;
-  }
-}
+.countdown-display.warn { color: var(--accent); }
+.countdown-display.danger { color: var(--danger); animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+.pay-methods { margin-bottom: 12px; }
 </style>

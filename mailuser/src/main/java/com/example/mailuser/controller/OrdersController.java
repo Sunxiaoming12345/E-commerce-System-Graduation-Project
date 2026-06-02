@@ -10,6 +10,7 @@ import com.example.mailuser.vo.PrePurchaseVO;
 import com.example.mailuser.vo.UserOrderStatsVO;
 import com.example.result.PageResult;
 import com.example.result.Result;
+import com.example.utils.IdempotentUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -22,6 +23,15 @@ import org.springframework.web.bind.annotation.*;
 public class OrdersController {
     @Autowired
     private OrdersService ordersService;
+
+    @Autowired
+    private IdempotentUtil idempotentUtil;
+
+    @GetMapping("/submit-token")
+    @ApiOperation(value = "获取提交令牌", notes = "获取一次性幂等令牌，用于防止重复提交订单")
+    public Result<String> getSubmitToken() {
+        return Result.success(idempotentUtil.reserveToken("submit-order", 300));
+    }
 
   /*  // 查询订单根据订单号
     @GetMapping("/select/{orderNumber}")

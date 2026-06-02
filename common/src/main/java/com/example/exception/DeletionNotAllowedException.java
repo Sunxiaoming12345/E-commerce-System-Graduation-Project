@@ -1,8 +1,6 @@
 package com.example.exception;
 
-import com.thoughtworks.xstream.core.BaseException;
-
-public class DeletionNotAllowedException extends BaseException {
+public class DeletionNotAllowedException extends RuntimeException {
     public DeletionNotAllowedException(String msg) {
         super(msg);
     }

@@ -1,91 +1,51 @@
 <template>
   <div class="profile">
-    <h2>个人中心</h2>
-    <div class="profile-content">
-      <div class="profile-info">
-        <div class="profile-avatar">
-          <el-avatar :size="80">{{ userStore.username?.charAt(0) || 'U' }}</el-avatar>
+    <div class="container">
+      <div class="profile-top">
+        <el-avatar :size="64" class="avatar">{{ (userStore.userInfo?.name || userStore.username || 'U').charAt(0) }}</el-avatar>
+        <div class="top-info">
+          <h2>{{ userStore.userInfo?.name || userStore.username || '用户' }}</h2>
+          <p>{{ userStore.userInfo?.phone || '未绑定手机号' }}</p>
         </div>
-        <div class="profile-details">
-          <h3>{{ userStore.username || '用户' }}</h3>
+        <div class="top-acts">
+          <el-button @click="openEdit">编辑资料</el-button>
+          <el-button plain @click="handleLogout">退出登录</el-button>
         </div>
       </div>
-      <div class="profile-actions">
-        <el-button type="primary" @click="dialogVisible = true">编辑资料</el-button>
-        <el-button type="danger" @click="userStore.logout(); router.push('/login')">退出登录</el-button>
-      </div>
-    </div>
 
-    <!-- 常用收货人信息 -->
-    <div class="profile-section">
-      <h3>常用收货人信息</h3>
-      <div class="profile-info-item">
-        <span class="label">常用收货人:</span>
-        <span class="value">{{ userStore.userInfo?.defaultReceiver || '未设置' }}</span>
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-num">{{ orderStats.totalOrders ?? 0 }}</div>
+          <div class="stat-lbl">全部订单</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">&yen;{{ fmt(orderStats.totalConsumption) }}</div>
+          <div class="stat-lbl">总消费</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">&yen;{{ fmt(balance) }}</div>
+          <div class="stat-lbl">账户余额</div>
+        </div>
       </div>
-      <div class="profile-info-item">
-        <span class="label">常用联系电话:</span>
-        <span class="value">{{ userStore.userInfo?.defaultPhone || '未设置' }}</span>
-      </div>
-      <div class="profile-info-item">
-        <span class="label">常用收货地址:</span>
-        <span class="value">{{ userStore.userInfo?.defaultAddress || '未设置' }}</span>
-      </div>
-    </div>
 
-    <div class="profile-stats">
-      <h3>我的统计</h3>
-      <div class="stats-grid">
-        <div class="stat-item">
-          <el-icon><Tickets /></el-icon>
-          <div class="stat-content">
-            <div class="stat-number">{{ orderStats.totalOrders ?? 0 }}</div>
-            <div class="stat-label">全部订单</div>
-          </div>
-        </div>
-        <div class="stat-item">
-          <el-icon><Money /></el-icon>
-          <div class="stat-content">
-            <div class="stat-number">¥{{ formatMoney(orderStats.totalConsumption) }}</div>
-            <div class="stat-label">总消费</div>
-          </div>
-        </div>
-        <div class="stat-item">
-          <el-icon><Wallet /></el-icon>
-          <div class="stat-content">
-            <div class="stat-number">¥{{ balance || 0 }}</div>
-            <div class="stat-label">账户余额</div>
-          </div>
-        </div>
+      <div class="info-card">
+        <h3>常用收货信息</h3>
+        <div class="info-row"><span>收货人</span><span>{{ userStore.userInfo?.defaultReceiver || '未设置' }}</span></div>
+        <div class="info-row"><span>联系电话</span><span>{{ userStore.userInfo?.defaultPhone || '未设置' }}</span></div>
+        <div class="info-row"><span>收货地址</span><span>{{ userStore.userInfo?.defaultAddress || '未设置' }}</span></div>
       </div>
-    </div>
 
-    <!-- 编辑资料对话框 -->
-    <el-dialog v-model="dialogVisible" title="编辑资料">
-      <el-form :model="form" label-width="120px">
-        <el-form-item label="姓名">
-          <el-input v-model="form.name" placeholder="请输入姓名" />
-        </el-form-item>
-        <el-form-item label="联系电话">
-          <el-input v-model="form.phone" placeholder="请输入联系电话" />
-        </el-form-item>
-        <el-form-item label="常用收货人">
-          <el-input v-model="form.defaultReceiver" placeholder="请输入常用收货人" />
-        </el-form-item>
-        <el-form-item label="常用联系电话">
-          <el-input v-model="form.defaultPhone" placeholder="请输入常用联系电话" />
-        </el-form-item>
-        <el-form-item label="常用收货地址">
-          <el-input v-model="form.defaultAddress" type="textarea" :rows="3" placeholder="请输入常用收货地址" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="dialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="submitForm">确定</el-button>
-        </span>
-      </template>
-    </el-dialog>
+      <el-dialog v-model="dialogVisible" title="编辑个人资料" width="440px">
+        <el-form :model="form" label-width="100px">
+          <el-form-item label="姓名"><el-input v-model="form.name" /></el-form-item>
+          <el-form-item label="联系电话"><el-input v-model="form.phone" /></el-form-item>
+          <el-form-item label="默认收货人"><el-input v-model="form.defaultReceiver" /></el-form-item>
+          <el-form-item label="默认联系电话"><el-input v-model="form.defaultPhone" /></el-form-item>
+          <el-form-item label="默认收货地址"><el-input v-model="form.defaultAddress" type="textarea" :rows="3" /></el-form-item>
+        </el-form>
+        <template #footer><el-button @click="dialogVisible=false">取消</el-button><el-button type="primary" @click="submitForm">保存</el-button></template>
+      </el-dialog>
+    </div>
   </div>
 </template>
 
@@ -93,219 +53,61 @@
 import { useRouter } from 'vue-router'
 import { onMounted, ref, watch } from 'vue'
 import { useUserStore } from '@/store/user'
-import { Tickets, Money, Wallet } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getBalance } from '@/api/balance'
 import { getOrderStats } from '@/api/orders'
 
-const router = useRouter()
-const userStore = useUserStore()
-const balance = ref(0)
-const orderStats = ref({ totalOrders: 0, totalConsumption: 0 })
+const router = useRouter(); const userStore = useUserStore()
+const balance = ref(0); const orderStats = ref({ totalOrders: 0, totalConsumption: 0 }); const dialogVisible = ref(false)
+const form = ref({ name: '', phone: '', defaultReceiver: '', defaultPhone: '', defaultAddress: '' })
 
-function formatMoney(v) {
-  const n = Number(v)
-  if (Number.isNaN(n)) return '0.00'
-  return n.toFixed(2)
-}
-const dialogVisible = ref(false)
-const form = ref({
-  name: '',
-  phone: '',
-  defaultReceiver: '',
-  defaultPhone: '',
-  defaultAddress: ''
-})
+const fmt = (v) => { const n = Number(v); return Number.isNaN(n) ? '0.00' : n.toFixed(2) }
 
-// 监听用户信息变化，更新表单
-watch(() => userStore.userInfo, (newInfo) => {
-  if (newInfo) {
-    form.value = {
-      name: newInfo.name || '',
-      phone: newInfo.phone || '',
-      defaultReceiver: newInfo.defaultReceiver || '',
-      defaultPhone: newInfo.defaultPhone || '',
-      defaultAddress: newInfo.defaultAddress || ''
-    }
-  }
-}, { immediate: true })
+watch(() => userStore.userInfo, (info) => { if (info) { form.value = { name: info.name || '', phone: info.phone || '', defaultReceiver: info.defaultReceiver || '', defaultPhone: info.defaultPhone || '', defaultAddress: info.defaultAddress || '' } } }, { immediate: true })
 
+const openEdit = () => { dialogVisible.value = true }
 const submitForm = async () => {
-  try {
-    const success = await userStore.updateInfo(form.value)
-    if (success) {
-      ElMessage.success('资料更新成功')
-      dialogVisible.value = false
-    } else {
-      ElMessage.error('资料更新失败')
-    }
-  } catch (error) {
-    ElMessage.error('资料更新失败')
-  }
+  try { const ok = await userStore.updateInfo(form.value); ElMessage[ok?'success':'error'](ok?'更新成功':'更新失败'); if (ok) dialogVisible.value = false } catch { ElMessage.error('更新失败') }
 }
+const handleLogout = () => { userStore.logout(); router.push('/login') }
 
-const fetchBalance = async () => {
-  try {
-    const res = await getBalance()
-    balance.value = res
-  } catch (error) {
-    console.error('获取余额失败:', error)
-  }
-}
-
-const fetchOrderStats = async () => {
-  try {
-    const res = await getOrderStats()
-    if (res) {
-      orderStats.value = {
-        totalOrders: res.totalOrders ?? 0,
-        totalConsumption: res.totalConsumption ?? 0
-      }
-    }
-  } catch (error) {
-    console.error('获取订单统计失败:', error)
-  }
-}
-
-onMounted(() => {
+onMounted(async () => {
   userStore.fetchUserInfo()
-  fetchBalance()
-  fetchOrderStats()
+  try { balance.value = await getBalance() } catch { /* */ }
+  try { const r = await getOrderStats(); if (r) orderStats.value = { totalOrders: r.totalOrders??0, totalConsumption: r.totalConsumption??0 } } catch { /* */ }
 })
 </script>
 
 <style scoped>
-.profile-section {
-  background-color: #f9f9f9;
-  padding: 30px;
-  border-radius: 8px;
-  margin-bottom: 40px;
-}
+.profile { padding: 0; }
+.container { max-width: 760px; margin: 0 auto; padding: 0 24px; }
 
-.profile-section h3 {
-  margin: 0 0 20px 0;
-  color: #333;
-  border-bottom: 1px solid #eaeaea;
-  padding-bottom: 10px;
+.profile-top {
+  display: flex; align-items: center; gap: 20px;
+  background: var(--surface); border-radius: var(--radius);
+  padding: 28px 32px; border: 1px solid var(--border-light);
+  margin-bottom: 20px;
 }
+.avatar { background: var(--primary); color: #fff; font-size: 24px; font-weight: 700; }
+.top-info { flex: 1; }
+.top-info h2 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+.top-info p { font-size: 14px; color: var(--text-secondary); }
+.top-acts { display: flex; gap: 10px; }
 
-.profile-info-item {
-  display: flex;
-  margin-bottom: 15px;
-  align-items: flex-start;
+.stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
+.stat-card {
+  background: var(--surface); border-radius: var(--radius); padding: 24px;
+  border: 1px solid var(--border-light); text-align: center;
 }
+.stat-num { font-size: 28px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.stat-lbl { font-size: 13px; color: var(--text-secondary); }
 
-.profile-info-item .label {
-  width: 120px;
-  font-size: 14px;
-  color: #666;
+.info-card {
+  background: var(--surface); border-radius: var(--radius); padding: 24px 28px;
+  border: 1px solid var(--border-light);
 }
-
-.profile-info-item .value {
-  flex: 1;
-  font-size: 14px;
-  color: #333;
-}
-
-.dialog-footer {
-  width: 100%;
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-</style>
-
-<style scoped>
-.profile {
-  padding: 20px 0;
-}
-
-.profile h2 {
-  margin-bottom: 30px;
-  color: #333;
-}
-
-.profile-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-color: #f9f9f9;
-  padding: 30px;
-  border-radius: 8px;
-  margin-bottom: 40px;
-}
-
-.profile-info {
-  display: flex;
-  align-items: center;
-  gap: 30px;
-}
-
-.profile-avatar {
-  margin-right: 20px;
-}
-
-.profile-details h3 {
-  margin: 0 0 10px 0;
-  color: #333;
-}
-
-.profile-details p {
-  margin: 5px 0;
-  color: #666;
-  font-size: 14px;
-}
-
-.profile-actions {
-  display: flex;
-  gap: 15px;
-}
-
-.profile-stats {
-  background-color: #f9f9f9;
-  padding: 30px;
-  border-radius: 8px;
-}
-
-.profile-stats h3 {
-  margin: 0 0 30px 0;
-  color: #333;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-}
-
-.stat-item {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  background-color: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.stat-item el-icon {
-  font-size: 24px;
-  color: #409EFF;
-}
-
-.stat-content {
-  flex: 1;
-}
-
-.stat-number {
-  font-size: 24px;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 5px;
-}
-
-.stat-label {
-  font-size: 14px;
-  color: #666;
-}
+.info-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+.info-row { display: flex; margin-bottom: 12px; font-size: 14px; }
+.info-row span:first-child { width: 90px; color: var(--text-secondary); }
+.info-row span:last-child { color: var(--text); }
 </style>

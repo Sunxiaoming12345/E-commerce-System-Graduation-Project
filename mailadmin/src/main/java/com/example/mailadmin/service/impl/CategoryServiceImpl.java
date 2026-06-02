@@ -2,6 +2,7 @@ package com.example.mailadmin.service.impl;
 
 import com.example.mailadmin.dto.AddCategoryDTO;
 import com.example.mailadmin.dto.EditCategoryDTO;
+import lombok.extern.slf4j.Slf4j;
 import com.example.mailadmin.entity.Category;
 import com.example.mailadmin.mapper.CategoryMapper;
 import com.example.mailadmin.service.CategoryService;
@@ -18,6 +19,7 @@ import java.util.List;
  * @author sunxiaoming
  * @date 2026-02-06
  */
+@Slf4j
 @Service
 public class CategoryServiceImpl implements CategoryService {
     @Autowired
@@ -69,10 +71,10 @@ public class CategoryServiceImpl implements CategoryService {
     private void clearCategoriesCache() {
         try {
             redisTemplate.delete(CATEGORIES_CACHE_KEY);
-            System.out.println("分类列表缓存已清除");
+            log.info("分类列表缓存已清除");
         } catch (Exception e) {
             // 缓存清除失败不影响主业务流程
-            System.out.println("清除分类列表缓存失败，不影响分类操作: " + e.getMessage());
+            log.warn("清除分类列表缓存失败，不影响分类操作: {}", e.getMessage());
         }
     }
 }

@@ -2,13 +2,24 @@
 server:
   address: 0.0.0.0
   port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
 
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/bysj?useUnicode=true&characterEncoding=utf8&serverTimezone=GMT%2B8
+    url: jdbc:mysql://192.168.100.1:3306/bysj?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8
     username: root
     password: 1234
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      connection-timeout: 5000
+      idle-timeout: 300000
+      max-lifetime: 600000
   application:
     name: gateway
   cloud:
@@ -17,16 +28,51 @@ spring:
         server-addr: 192.168.100.128:8848
     gateway:
       routes:
+        # 精确路由必须放在 /user/** 之前，避免被通用匹配吞掉
+        - id: order-service
+          uri: lb://order-service
+          predicates:
+            - Path=/user/orders/**
+        - id: cart-service-user-products
+          uri: lb://cart-service
+          predicates:
+            - Path=/user/products/**
+        - id: cart-service-user-cart
+          uri: lb://cart-service
+          predicates:
+            - Path=/user/shopCart/**
         - id: mailadmin
           uri: lb://mailadmin
           predicates:
             - Path=/admin/**
+        # admin 商品管理 API（必须在 /products/** 之前，避免被 cart-service 吞掉）
         - id: mailadmin-products
           uri: lb://mailadmin
           predicates:
+            - Path=/products/products/**
+        - id: cart-service-products
+          uri: lb://cart-service
+          predicates:
             - Path=/products/**
-        - id: mailuser
+        - id: cart-service-cart
+          uri: lb://cart-service
+          predicates:
+            - Path=/cart/**
+        # mailuser 用户端路由（必须在 /user/** 之前）
+        - id: mailuser-reviews
           uri: lb://mailuser
+          predicates:
+            - Path=/user/reviews/**
+        - id: mailuser-coupons
+          uri: lb://mailuser
+          predicates:
+            - Path=/user/coupons/**
+        - id: mailuser-refunds
+          uri: lb://mailuser
+          predicates:
+            - Path=/user/refunds/**
+        - id: user-service
+          uri: lb://user-service
           predicates:
             - Path=/user/**
   mvc:

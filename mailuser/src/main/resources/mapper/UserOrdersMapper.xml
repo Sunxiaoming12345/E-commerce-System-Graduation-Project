@@ -34,6 +34,13 @@
         SET order_status = #{orderStatus}, payment_method = #{paymentMethod}, pay_time = NOW()
         WHERE order_id = #{orderId}
     </update>
+
+    <!-- 更新订单总金额 -->
+    <update id="updateOrderTotalAmount">
+        UPDATE orders
+        SET total_amount = #{totalAmount}
+        WHERE order_id = #{orderId}
+    </update>
     
     <!-- 保存订单项 -->
     <insert id="saveOrderItem" parameterType="java.util.Map">

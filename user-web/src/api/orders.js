@@ -52,3 +52,10 @@ export function prepurchase(data) {
         data
     })
 }
+
+export function getSubmitToken() {
+    return request({
+        url: '/user/orders/submit-token',
+        method: 'get'
+    })
+}

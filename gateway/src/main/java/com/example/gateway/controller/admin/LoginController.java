@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.example.annotation.RateLimit;
 import com.example.result.Result;
 
 
@@ -22,7 +23,7 @@ public class LoginController {
     @Autowired
     private AdminService adminService;
     @PostMapping("/login")
-
+    @RateLimit(key = "admin-login", max = 5, seconds = 60, keyType = "ip", message = "登录过于频繁，请稍后再试")
     public Result<AdminLoginInfo> login(@RequestBody AdminLoginInfoDTO adminLoginInfoDTO){
 
 

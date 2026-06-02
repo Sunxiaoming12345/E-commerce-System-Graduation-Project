@@ -59,6 +59,31 @@
           </el-radio-group>
         </div>
 
+        <!-- 优惠券 -->
+        <div class="section" v-if="coupons.length > 0">
+          <h3>优惠券</h3>
+          <div class="coupon-list">
+            <div
+              v-for="c in coupons"
+              :key="c.userCouponId"
+              class="coupon-card"
+              :class="{ selected: selectedCouponId === c.userCouponId }"
+              @click="onCouponSelect(selectedCouponId === c.userCouponId ? null : c.userCouponId)"
+            >
+              <div class="coupon-left">
+                <span class="coupon-value" v-if="c.type === 0">¥{{ c.discountValue }}</span>
+                <span class="coupon-value" v-else>{{ (c.discountValue * 10).toFixed(1) }}折</span>
+                <span class="coupon-name">{{ c.name }}</span>
+              </div>
+              <div class="coupon-right">
+                <span class="coupon-condition">满 ¥{{ c.minAmount }} 可用</span>
+                <span class="coupon-expire">有效期至 {{ c.endTime?.substring(0, 10) }}</span>
+              </div>
+              <el-icon v-if="selectedCouponId === c.userCouponId" class="coupon-check" color="#fff" :size="20"><CircleCheckFilled /></el-icon>
+            </div>
+          </div>
+        </div>
+
         <!-- 订单金额 -->
         <div class="section">
           <h3>订单金额</h3>
@@ -71,9 +96,13 @@
               <span>运费：</span>
               <span>¥{{ shippingFee.toFixed(2) }}</span>
             </div>
+            <div class="amount-item coupon-discount" v-if="couponDiscount > 0">
+              <span>优惠券抵扣：</span>
+              <span>-¥{{ couponDiscount.toFixed(2) }}</span>
+            </div>
             <div class="amount-item total">
               <span>实付金额：</span>
-              <span>¥{{ (totalPrice + shippingFee).toFixed(2) }}</span>
+              <span>¥{{ actualAmount.toFixed(2) }}</span>
             </div>
           </div>
         </div>
@@ -81,7 +110,7 @@
         <!-- 操作按钮 -->
         <div class="order-actions">
           <el-button @click="goBack">返回购物车</el-button>
-          <el-button type="primary" size="large" @click="submitOrder">提交订单</el-button>
+          <el-button type="primary" size="large" :loading="loading" @click="submitOrder">提交订单</el-button>
         </div>
       </div>
     </el-loading>
@@ -126,11 +155,13 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { createOrder, payOrder } from '@/api/orders'
+import { createOrder, payOrder, getSubmitToken } from '@/api/orders'
 import { removeCartItem } from '@/api/cart'
 import { getBalance } from '@/api/balance'
 import { getProductDetail } from '@/api/products'
+import { getMyCoupons, previewCouponDiscount } from '@/api/coupons'
 import { ElMessage } from 'element-plus'
+import { CircleCheckFilled } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
 
 const router = useRouter()
@@ -152,10 +183,18 @@ const form = ref({
 // 运费
 const shippingFee = ref(0)
 
+// 优惠券相关
+const coupons = ref([])
+const selectedCouponId = ref(null)
+const couponDiscount = ref(0) // 优惠券抵扣金额
+
 // 余额相关
 const balanceDialogVisible = ref(false)
 const userBalance = ref(0)
 const currentOrderNumber = ref('')
+
+// 幂等令牌
+const submitToken = ref('')
 
 // 倒计时相关
 const countdownSeconds = ref(600) // 10分钟，默认值
@@ -168,9 +207,9 @@ const totalPrice = computed(() => {
   }, 0)
 })
 
-// 计算实付金额
+// 计算实付金额（扣除优惠券抵扣）
 const actualAmount = computed(() => {
-  return totalPrice.value + shippingFee.value
+  return totalPrice.value + shippingFee.value - couponDiscount.value
 })
 
 const balanceInsufficient = computed(() => Number(userBalance.value) < Number(actualAmount.value))
@@ -239,6 +278,42 @@ const loadUserBalance = async () => {
   }
 }
 
+// 加载用户可用优惠券
+const loadCoupons = async () => {
+  try {
+    const all = await getMyCoupons(0) // status=0 未使用
+    // 过滤出满足最低消费金额的优惠券
+    coupons.value = (all || []).filter(c => {
+      return totalPrice.value >= (c.minAmount || 0)
+    })
+    if (coupons.value.length > 0) {
+      console.log('可用的优惠券：', coupons.value)
+    }
+  } catch (error) {
+    console.error('加载优惠券失败', error)
+    coupons.value = []
+  }
+}
+
+// 选择优惠券
+const onCouponSelect = async (userCouponId) => {
+  if (!userCouponId) {
+    selectedCouponId.value = null
+    couponDiscount.value = 0
+    return
+  }
+  try {
+    const discount = await previewCouponDiscount(userCouponId, totalPrice.value)
+    selectedCouponId.value = userCouponId
+    couponDiscount.value = discount || 0
+    ElMessage.success(`优惠券可抵扣 ¥${(discount || 0).toFixed(2)}`)
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.msg || '优惠券不可用')
+    selectedCouponId.value = null
+    couponDiscount.value = 0
+  }
+}
+
 // 提交订单
 const submitOrder = async () => {
   // 验证表单
@@ -293,7 +368,7 @@ const submitOrder = async () => {
   try {
     loading.value = true
     
-    // 创建订单
+    // 创建订单，携带一次性幂等令牌
     const orderData = {
       items: orderItems.value.map(item => ({
         productId: item.productId,
@@ -303,11 +378,18 @@ const submitOrder = async () => {
       receiverPhone: form.value.receiverPhone,
       shippingAddress: form.value.shippingAddress,
       paymentMethod: parseInt(form.value.paymentMethod),
-      totalAmount: actualAmount.value
+      totalAmount: actualAmount.value,
+      idempotentToken: submitToken.value
+    }
+    // 如果选择了优惠券，传递 userCouponId
+    if (selectedCouponId.value) {
+      orderData.userCouponId = selectedCouponId.value
     }
 
     // 调用创建订单接口
     const res = await createOrder(orderData)
+    // 订单创建成功后刷新令牌，下次提交用新令牌
+    try { submitToken.value = await getSubmitToken() } catch (e) { /* 静默 */ }
     currentOrderNumber.value = res.orderNumber || ''
     
     // 获取支付超时时间（秒）
@@ -430,6 +512,9 @@ onMounted(async () => {
   if (form.value.paymentMethod === '2') {
     await loadUserBalance()
   }
+  await loadCoupons()
+  // 获取一次性幂等令牌
+  try { submitToken.value = await getSubmitToken() } catch (e) { /* 静默 */ }
 })
 </script>
 
@@ -571,4 +656,84 @@ onMounted(async () => {
     opacity: 1;
   }
 }
+
+/* 优惠券样式 */
+.coupon-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.coupon-card {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  min-width: 280px;
+  flex: 1;
+  max-width: 400px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all .2s;
+  background: #fafafa;
+}
+.coupon-card:hover {
+  border-color: var(--primary, #409eff);
+  box-shadow: 0 2px 8px rgba(0,0,0,.1);
+}
+.coupon-card.selected {
+  border-color: var(--primary, #409eff);
+  background: linear-gradient(135deg, #e8f4ff 0%, #f0f7ff 100%);
+}
+.coupon-left {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--primary, #409eff);
+  color: #fff;
+  min-width: 90px;
+  text-align: center;
+}
+.coupon-value {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.coupon-name {
+  font-size: 11px;
+  margin-top: 4px;
+  opacity: 0.9;
+}
+.coupon-right {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 12px 16px;
+  gap: 4px;
+}
+.coupon-condition {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+.coupon-expire {
+  font-size: 12px;
+  color: #999;
+}
+.coupon-check {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: var(--primary, #409eff);
+  border-radius: 50%;
+  padding: 2px;
+}
+.coupon-discount span:last-child {
+  color: var(--success, #67c23a);
+}
+
+/* 已选择无优惠券时的小提示 */
+.coupon-list + .section { margin-top: 24px; }
 </style>

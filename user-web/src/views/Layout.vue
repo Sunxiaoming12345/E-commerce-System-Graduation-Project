@@ -1,73 +1,64 @@
 <template>
   <div class="layout">
     <header class="header">
-      <div class="container">
-        <div class="header-left">
-          <router-link to="/home" class="logo" @click="clearSearch">首页</router-link>
-        </div>
-        <div class="header-center">
-          <el-input
-              v-model="searchQuery"
-              placeholder="搜索商品"
-              prefix-icon="el-icon-search"
-              style="width: 300px"
-              @keyup.enter="handleSearch"
-          />
-        </div>
-        <div class="header-right">
-          <router-link to="/cart" class="header-link">
-            <el-icon><ShoppingCart /></el-icon>
-            <span>购物车</span>
+      <div class="header-inner">
+        <router-link to="/home" class="brand">
+          <span class="brand-icon">&#9826;</span>
+          <span class="brand-text">邮购商城</span>
+        </router-link>
+
+        <div class="header-spacer" />
+
+        <nav class="nav-links">
+          <router-link to="/cart" class="nav-item">
+            <el-icon :size="20"><ShoppingCart /></el-icon>
+            <span class="nav-label">购物车</span>
           </router-link>
-          <router-link to="/orders" class="header-link">
-            <el-icon><Tickets /></el-icon>
-            <span>订单</span>
+          <router-link to="/orders" class="nav-item">
+            <el-icon :size="20"><Tickets /></el-icon>
+            <span class="nav-label">订单</span>
           </router-link>
-          <router-link to="/profile" class="header-link">
-            <el-icon><User /></el-icon>
-            <span>{{ userStore.userInfo ? userStore.userInfo.username : '个人中心' }}</span>
+          <router-link to="/coupons" class="nav-item">
+            <el-icon :size="20"><Present /></el-icon>
+            <span class="nav-label">领券</span>
           </router-link>
-          <el-button v-if="userStore.isLoggedIn" type="text" @click="handleLogout">退出登录</el-button>
-        </div>
+          <router-link to="/refunds" class="nav-item">
+            <el-icon :size="20"><Wallet /></el-icon>
+            <span class="nav-label">退款</span>
+          </router-link>
+          <router-link to="/profile" class="nav-item">
+            <el-icon :size="20"><User /></el-icon>
+            <span class="nav-label">{{ userStore.userInfo?.username || '我的' }}</span>
+          </router-link>
+          <span v-if="userStore.isLoggedIn" class="nav-logout" @click="handleLogout">退出</span>
+        </nav>
       </div>
     </header>
+
     <main class="main">
-      <div class="container">
-        <router-view />
-      </div>
+      <router-view v-slot="{ Component }">
+        <transition name="page" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
     </main>
+
     <footer class="footer">
-      <div class="container">
-        <p>© 孙小明</p>
+      <div class="footer-inner">
+        <span class="footer-copy">&copy; 2026 邮购商城 &#8226; 毕业设计</span>
       </div>
     </footer>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
-import { ShoppingCart, Tickets, User } from '@element-plus/icons-vue'
+import { Present, ShoppingCart, Tickets, User, Wallet } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const userStore = useUserStore()
-const searchQuery = ref('')
-
-const handleSearch = () => {
-  if (searchQuery.value) {
-    router.push({ path: '/home', query: { keyword: searchQuery.value } })
-  }
-}
-
-const handleLogout = () => {
-  userStore.logout()
-  router.push('/login')
-}
-
-const clearSearch = () => {
-  searchQuery.value = ''
-}
+const handleLogout = () => { userStore.logout(); router.push('/login') }
 </script>
 
 <style scoped>
@@ -77,75 +68,80 @@ const clearSearch = () => {
   flex-direction: column;
 }
 
+/* Header */
 .header {
-  background-color: #fff;
-  border-bottom: 1px solid #eaeaea;
-  padding: 10px 0;
+  background: rgba(255,255,255,.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   position: sticky;
   top: 0;
   z-index: 100;
+  border-bottom: 1px solid var(--border-light);
 }
-
-.container {
-  width: 1200px;
+.header-inner {
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 0 20px;
-}
-
-.header .container {
+  padding: 0 24px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-}
-
-.logo {
-  font-size: 24px;
-  font-weight: bold;
-  color: #409EFF;
-  text-decoration: none;
-}
-
-.header-center {
-  flex: 1;
-  max-width: 500px;
-  margin: 0 40px;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
+  height: 60px;
   gap: 20px;
 }
-
-.header-link {
+.brand {
   display: flex;
   align-items: center;
-  gap: 5px;
-  color: #333;
+  gap: 10px;
   text-decoration: none;
-  padding: 5px 10px;
-  border-radius: 4px;
-  transition: all 0.3s;
+  flex-shrink: 0;
 }
-
-.header-link:hover {
-  background-color: #f5f7fa;
-  color: #409EFF;
+.brand-icon {
+  font-size: 24px;
+  color: var(--accent);
 }
-
-.main {
-  flex: 1;
-  padding: 20px 0;
+.brand-text {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 1px;
 }
+.header-spacer { flex: 1; }
 
+/* Nav */
+.nav-links { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.nav-item {
+  display: flex; align-items: center; gap: 6px;
+  color: var(--text-secondary); text-decoration: none;
+  padding: 8px 14px; border-radius: 8px;
+  font-size: 14px; font-weight: 500;
+  transition: all .2s;
+}
+.nav-item:hover { background: var(--bg-warm); color: var(--text); }
+.nav-item.router-link-active { background: var(--bg-warm); color: var(--text); }
+.nav-label { font-size: 13px; }
+.nav-logout {
+  color: var(--text-muted); cursor: pointer; font-size: 13px;
+  margin-left: 12px; padding: 4px 8px;
+}
+.nav-logout:hover { color: var(--danger); }
+
+/* Main */
+.main { flex: 1; padding: 0; }
+
+/* Footer */
 .footer {
-  background-color: #f5f7fa;
-  padding: 20px 0;
-  margin-top: 40px;
+  border-top: 1px solid var(--border-light);
+  padding: 24px 0;
+  margin-top: auto;
 }
-
-.footer .container {
+.footer-inner {
+  max-width: 1200px; margin: 0 auto; padding: 0 24px;
   text-align: center;
-  color: #999;
 }
+.footer-copy { font-size: 13px; color: var(--text-muted); }
+
+/* Page transition */
+.page-enter-active,
+.page-leave-active { transition: opacity .15s ease; }
+.page-enter-from,
+.page-leave-to { opacity: 0; }
 </style>

@@ -1,5 +1,7 @@
 package com.example.mailadmin.service.impl;
 
+import com.example.utils.CacheUtil;
+import lombok.extern.slf4j.Slf4j;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,6 +29,7 @@ import org.springframework.stereotype.Service;
 
 
 
+@Slf4j
 @Service
 public class ProductsServiceImpl implements ProductsService
 {
@@ -38,6 +41,9 @@ public class ProductsServiceImpl implements ProductsService
 
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
+
+    @Autowired
+    private CacheUtil cacheUtil;
 
     private static final String RECOMMENDED_PRODUCTS_CACHE_KEY = "products:recommended";
 
@@ -76,16 +82,26 @@ public class ProductsServiceImpl implements ProductsService
         Products currentProduct = productsMapper.selectProductsById(editProductsDTO.getId());
         Integer currentStock = currentProduct.getStock();
         Integer newStock = editProductsDTO.getStock();
-        
+        Long categoryId = currentProduct.getCategoryId();
+
         // 复制属性并更新
         Products products = new Products();
         BeanUtils.copyProperties(editProductsDTO,products);
         products.setUpdateTime(LocalDateTime.now());
         productsMapper.updateProducts(products);
-        
-        // 只有当库存从有到0或从0到有时才发送消息
+
+        // 更新 Redis 库存缓存
+        cacheUtil.updateStockInCache(editProductsDTO.getId(), newStock);
+        // 清除商品详情缓存，下次查询时重建
+        clearProductDetailCache(editProductsDTO.getId());
+
+        // 只有当库存从有到0或从0到有时才发送消息和清除分类/推荐缓存
         if ((currentStock > 0 && newStock == 0) || (currentStock == 0 && newStock > 0)) {
-            sendStockUpdateMessage(editProductsDTO.getId(), newStock, currentProduct.getCategoryId());
+            sendStockUpdateMessage(editProductsDTO.getId(), newStock, categoryId);
+            if (categoryId != null) {
+                clearCategoryProductCache(categoryId);
+            }
+            clearProductCache();
         }
     }
 
@@ -113,14 +129,16 @@ public class ProductsServiceImpl implements ProductsService
         Long categoryId = product.getCategoryId();
         // 更新库存
         productsMapper.updateStock(id, stock);
-        // 只有当库存从有到0或从0到有时才发送消息和清除缓存
+        // 更新 Redis 库存缓存
+        cacheUtil.updateStockInCache(id, stock);
+        // 清除商品详情缓存，下次查询时重建
+        clearProductDetailCache(id);
+        // 只有当库存从有到0或从0到有时才发送消息和清除分类/推荐缓存
         if ((currentStock > 0 && stock == 0) || (currentStock == 0 && stock > 0)) {
             sendStockUpdateMessage(id, stock, categoryId);
-            // 清除对应分类的商品缓存
             if (categoryId != null) {
                 clearCategoryProductCache(categoryId);
             }
-            // 清除推荐商品缓存
             clearProductCache();
         }
     }
@@ -148,6 +166,8 @@ public class ProductsServiceImpl implements ProductsService
             map.put("id", dto.getId());
             map.put("stock", dto.getStock());
             stockUpdateList.add(map);
+            cacheUtil.updateStockInCache(dto.getId(), dto.getStock());
+            clearProductDetailCache(dto.getId());
         }
         productsMapper.batchUpdateStock(stockUpdateList);
         // 如果有商品库存状态发生变化，清除推荐商品缓存
@@ -163,7 +183,7 @@ public class ProductsServiceImpl implements ProductsService
             String message = productId + "," + stock + "," + categoryId;
             rabbitTemplate.convertAndSend(RabbitMQConstant.STOCK_EXCHANGE_NAME, RabbitMQConstant.STOCK_ROUTING_KEY, message);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("发送库存更新消息失败", e);
         }
     }
 
@@ -172,10 +192,20 @@ public class ProductsServiceImpl implements ProductsService
         try {
             // 清除商品推荐缓存
             redisTemplate.delete(RECOMMENDED_PRODUCTS_CACHE_KEY);
-            System.out.println("商品推荐缓存已清除");
+            log.info("商品推荐缓存已清除");
         } catch (Exception e) {
             // 缓存清除失败不影响主业务流程
-            System.out.println("缓存清除失败，不影响商品操作: " + e.getMessage());
+            log.warn("缓存清除失败，不影响商品操作: {}", e.getMessage());
+        }
+    }
+
+    // 清除商品详情缓存
+    private void clearProductDetailCache(Long productId) {
+        try {
+            redisTemplate.delete("product:detail:" + productId);
+            log.info("商品详情缓存已清除，商品ID：{}", productId);
+        } catch (Exception e) {
+            log.warn("商品详情缓存清除失败，不影响商品操作: {}", e.getMessage());
         }
     }
 
@@ -184,10 +214,10 @@ public class ProductsServiceImpl implements ProductsService
         try {
             String categoryProductsCacheKey = "products:category:" + categoryId;
             redisTemplate.delete(categoryProductsCacheKey);
-            System.out.println("分类商品缓存已清除，分类ID：" + categoryId);
+            log.info("分类商品缓存已清除，分类ID：{}", categoryId);
         } catch (Exception e) {
             // 缓存清除失败不影响主业务流程
-            System.out.println("分类商品缓存清除失败，不影响商品操作: " + e.getMessage());
+            log.warn("分类商品缓存清除失败，不影响商品操作: {}", e.getMessage());
         }
     }
 

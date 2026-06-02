@@ -7,6 +7,7 @@ import com.example.mailadmin.entity.Orders;
 import com.example.mailadmin.entity.Payments;
 import com.example.mailadmin.mapper.AdminOrdersMapper;
 import com.example.mailadmin.service.OrdersService;
+import com.example.mailadmin.vo.CouponVO;
 import com.example.mailadmin.vo.OrderDetailVO;
 import com.example.mailadmin.vo.OrderStatisticsVO;
 import com.example.result.PageResult;
@@ -44,6 +45,20 @@ public class OrdersServiceImpl implements OrdersService {
         orderDetailVO.setOrder(order);
         orderDetailVO.setOrderItems(orderItems);
         orderDetailVO.setPayment(payment);
+
+        // 查询订单使用的优惠券信息
+        try {
+            CouponVO couponVO = adminOrdersMapper.selectCouponByOrderId(id);
+            if (couponVO != null) {
+                orderDetailVO.setCouponName(couponVO.getName());
+                orderDetailVO.setCouponType(couponVO.getType());
+                orderDetailVO.setCouponDiscount(couponVO.getDiscountValue());
+                orderDetailVO.setCouponMinAmount(couponVO.getMinAmount());
+            }
+        } catch (Exception e) {
+            // 静默处理，优惠券信息非必需
+        }
+
         return orderDetailVO;
     }
 

@@ -18,9 +18,15 @@ const routes = [
       { path: 'products', name: 'Products', component: () => import('@/views/Products.vue'), meta: { title: '商品管理' } },
       { path: 'orders', name: 'Orders', component: () => import('@/views/Orders.vue'), meta: { title: '订单管理' } },
       { path: 'categories', name: 'Categories', component: () => import('@/views/Categories.vue'), meta: { title: '分类管理' } },
-      { path: 'payments', name: 'Payments', component: () => import('@/views/Payments.vue'), meta: { title: '支付记录' } }
+      { path: 'payments', name: 'Payments', component: () => import('@/views/Payments.vue'), meta: { title: '支付记录' } },
+      { path: 'reviews', name: 'Reviews', component: () => import('@/views/Reviews.vue'), meta: { title: '评价管理' } },
+      { path: 'coupons', name: 'Coupons', component: () => import('@/views/Coupons.vue'), meta: { title: '优惠券管理' } },
+      { path: 'refunds', name: 'Refunds', component: () => import('@/views/Refunds.vue'), meta: { title: '退款管理' } }
     ]
-  }
+  },
+  // 兼容旧路径 /home 和未匹配路由 → 重定向到工作台
+  { path: '/home', redirect: '/dashboard' },
+  { path: '/:pathMatch(.*)*', redirect: '/dashboard' }
 ]
 
 const router = createRouter({

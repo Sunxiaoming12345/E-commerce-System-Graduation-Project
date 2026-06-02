@@ -87,4 +87,12 @@
         select COALESCE(sum(total_amount), 0) from orders where order_status in (1, 2, 3) and date_format(create_time, '%Y-%m') = date_format(current_date, '%Y-%m')
     </select>
 
+    <!-- 根据订单ID查询使用的优惠券信息 -->
+    <select id="selectCouponByOrderId" resultType="com.example.mailadmin.vo.CouponVO">
+        SELECT c.name, c.type, c.discount_value AS discountValue, c.min_amount AS minAmount
+        FROM user_coupons uc
+        JOIN coupons c ON uc.coupon_id = c.coupon_id
+        WHERE uc.order_id = #{orderId}
+    </select>
+
 </mapper>

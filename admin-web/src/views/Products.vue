@@ -283,39 +283,105 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.products-page .toolbar {
-  margin-bottom: 16px;
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.products-page .pagination {
-  margin-top: 16px;
-  display: flex;
-  justify-content: flex-end;
+.products-page { animation: fade-in 0.25s var(--ease); }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.toolbar { margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+/* === Table === */
+.products-page :deep(.el-table) {
+  --el-table-bg-color: #fff; --el-table-tr-bg-color: #fff;
+  --el-table-header-bg-color: #fafaf9; --el-table-row-hover-bg-color: #f5f3f0;
+  --el-table-border-color: #111; --el-table-text-color: #111;
+  --el-table-header-text-color: #111;
+  border: 3px solid #111;
+  box-shadow: var(--shadow-hard);
 }
 
-.avatar-uploader .avatar {
-  width: 120px;
-  height: 120px;
-  object-fit: cover;
-  border-radius: 4px;
+.products-page :deep(.el-table th.el-table__cell) {
+  background: #111; color: #fff;
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  border-bottom: 2px solid #111;
 }
 
-.avatar-uploader-icon {
-  width: 120px;
-  height: 120px;
-  line-height: 120px;
-  border: 1px dashed #d9d9d9;
-  border-radius: 4px;
-  text-align: center;
-  color: #999;
-  font-size: 24px;
-  cursor: pointer;
+.products-page :deep(.el-table td.el-table__cell) {
+  border-bottom: 2px solid #e5e3e0;
 }
 
-.avatar-uploader-icon:hover {
-  border-color: #409eff;
-  color: #409eff;
+.products-page :deep(.el-table__body tr:hover td) {
+  background: #fafaf9 !important;
+}
+
+.products-page .pagination { margin-top: 20px; display: flex; justify-content: flex-end; }
+
+/* === Pagination brutalist === */
+.products-page :deep(.el-pager li) {
+  border: 2px solid #111 !important;
+  font-weight: 700 !important;
+}
+.products-page :deep(.el-pager li.is-active) {
+  background: #111 !important; color: #fff !important;
+}
+
+/* === Dialog === */
+.products-page :deep(.el-dialog) {
+  --el-dialog-bg-color: #fff;
+  border: 3px solid #111;
+  box-shadow: var(--shadow-hard-lg);
+  border-radius: 0;
+}
+
+.products-page :deep(.el-dialog__header) {
+  background: #111; color: #fff;
+  padding: 16px 24px; margin: 0;
+}
+.products-page :deep(.el-dialog__title) { color: #fff; font-weight: 700; font-size: 15px; }
+.products-page :deep(.el-dialog__headerbtn .el-icon) { color: #fff; }
+
+.products-page :deep(.el-dialog__body) { padding: 24px; }
+
+.products-page :deep(.el-dialog__footer) {
+  border-top: 3px solid #111; padding: 16px 24px;
+}
+
+/* === Form elements brutalist === */
+.products-page :deep(.el-input__wrapper),
+.products-page :deep(.el-textarea__inner) {
+  border: 2px solid #111; border-radius: 0; box-shadow: none;
+}
+
+.products-page :deep(.el-input__wrapper:focus-within),
+.products-page :deep(.el-textarea__inner:focus) {
+  border-color: #e53935;
+  box-shadow: 3px 3px 0 #111;
+}
+
+/* === Upload === */
+.avatar-uploader :deep(.el-upload) {
+  border: 3px dashed #111;
+  border-radius: 0;
+  width: 120px; height: 120px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.1s;
+  background: #fafaf9;
+}
+
+.avatar-uploader :deep(.el-upload:hover) {
+  border-style: solid;
+  background: #fff;
+  box-shadow: 4px 4px 0 #111;
+  transform: translate(-2px, -2px);
+}
+
+.avatar-uploader .avatar { width: 120px; height: 120px; object-fit: cover; display: block; }
+.avatar-uploader-icon { font-size: 28px; color: #111; }
+
+/* === Buttons in dialog === */
+.products-page :deep(.el-dialog__footer .el-button--primary) {
+  border: 2px solid #111; background: #111; color: #fff;
+}
+.products-page :deep(.el-dialog__footer .el-button--primary:hover) {
+  background: #e53935; border-color: #e53935;
 }
 </style>

@@ -56,4 +56,7 @@ public interface AdminOrdersMapper {
     //获取本月销售额
     BigDecimal getMonthSales();
 
+    // 根据订单ID查询使用的优惠券信息
+    com.example.mailadmin.vo.CouponVO selectCouponByOrderId(@Param("orderId") Long orderId);
+
 }
