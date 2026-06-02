@@ -42,10 +42,11 @@ public class LoginController {
      */
     private String getClientIp(String xForwardedFor, String xRealIp) {
         String ip = null;
-        if (xForwardedFor != null && !xForwardedFor.isEmpty() && !"unknown".equalsIgnoreCase(xForwardedFor)) {
-            ip = xForwardedFor;
-        } else if (xRealIp != null && !xRealIp.isEmpty() && !"unknown".equalsIgnoreCase(xRealIp)) {
+        // X-Real-IP 优先（nginx host 模式直接设置 remote_addr）
+        if (xRealIp != null && !xRealIp.isEmpty() && !"unknown".equalsIgnoreCase(xRealIp)) {
             ip = xRealIp;
+        } else if (xForwardedFor != null && !xForwardedFor.isEmpty() && !"unknown".equalsIgnoreCase(xForwardedFor)) {
+            ip = xForwardedFor;
         }
         // X-Forwarded-For 可能包含多级代理，取第一个
         if (ip != null && ip.contains(",")) {
