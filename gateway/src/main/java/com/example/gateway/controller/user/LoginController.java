@@ -9,13 +9,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
-import javax.servlet.http.HttpServletRequest;
 import com.example.annotation.RateLimit;
 import com.example.gateway.dto.UserRegisterDTO;
 
@@ -29,8 +27,11 @@ public class LoginController {
 
     @PostMapping("/login")
     @RateLimit(key = "login", max = 5, seconds = 60, keyType = "ip", message = "登录过于频繁，请稍后再试")
-    public Result<UserLoginInfo> login(@RequestBody UserLoginInfoDTO userLoginInfoDTO, HttpServletRequest request){
-        String clientIp = getClientIp(request);
+    public Result<UserLoginInfo> login(
+            @RequestBody UserLoginInfoDTO userLoginInfoDTO,
+            @RequestHeader(value = "X-Forwarded-For", required = false) String xForwardedFor,
+            @RequestHeader(value = "X-Real-IP", required = false) String xRealIp) {
+        String clientIp = getClientIp(xForwardedFor, xRealIp);
         UserLoginInfo userLoginInfo = userService.login(userLoginInfoDTO, clientIp);
         log.info("user登录成功");
         return Result.success(userLoginInfo);
@@ -39,19 +40,18 @@ public class LoginController {
     /**
      * 获取客户端真实 IP（优先从 X-Forwarded-For 取，适配 nginx 代理场景）
      */
-    private String getClientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("X-Real-IP");
-        }
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
+    private String getClientIp(String xForwardedFor, String xRealIp) {
+        String ip = null;
+        if (xForwardedFor != null && !xForwardedFor.isEmpty() && !"unknown".equalsIgnoreCase(xForwardedFor)) {
+            ip = xForwardedFor;
+        } else if (xRealIp != null && !xRealIp.isEmpty() && !"unknown".equalsIgnoreCase(xRealIp)) {
+            ip = xRealIp;
         }
         // X-Forwarded-For 可能包含多级代理，取第一个
         if (ip != null && ip.contains(",")) {
             ip = ip.substring(0, ip.indexOf(",")).trim();
         }
-        return ip;
+        return ip != null ? ip : "unknown";
     }
 
     @PostMapping("/register")
