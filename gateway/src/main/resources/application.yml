@@ -58,17 +58,17 @@ spring:
           uri: lb://cart-service
           predicates:
             - Path=/cart/**
-        # mailuser 用户端路由（必须在 /user/** 之前）
-        - id: mailuser-reviews
-          uri: lb://mailuser
+        # 用户端独立服务路由（必须在 /user/** 之前）
+        - id: review-service
+          uri: lb://review-service
           predicates:
             - Path=/user/reviews/**
-        - id: mailuser-coupons
-          uri: lb://mailuser
+        - id: coupon-service
+          uri: lb://coupon-service
           predicates:
             - Path=/user/coupons/**
-        - id: mailuser-refunds
-          uri: lb://mailuser
+        - id: refund-service
+          uri: lb://refund-service
           predicates:
             - Path=/user/refunds/**
         - id: user-service

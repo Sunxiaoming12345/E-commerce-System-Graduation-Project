@@ -57,7 +57,7 @@ const handleLogin = async () => {
   if (!loginRef.value) return
   await loginRef.value.validate(async (ok) => {
     if (!ok) return
-    try { const res = await login(loginForm); userStore.setToken(res.token); userStore.setUsername(res.username); ElMessage.success('登录成功'); router.push(route.query.redirect || '/') } catch (e) { ElMessage.error(e?.message||'登录失败') }
+    try { const res = await login(loginForm); userStore.setToken(res.token); userStore.setUsername(res.username); ElMessage.success('登录成功'); router.push(route.query.redirect || '/') } catch (e) { /* request拦截器已提示 */ }
   })
 }
 const sendCode = async () => {

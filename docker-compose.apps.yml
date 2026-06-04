@@ -95,13 +95,61 @@ services:
       - bridge
     restart: unless-stopped
 
-  mailuser:
+  user-service:
     build:
       context: .
-      dockerfile: mailuser/Dockerfile
-    container_name: bysj-mailuser
+      dockerfile: user-service/Dockerfile
+    container_name: bysj-user-service
     ports:
-      - "${MAILUSER_PORT:-8082}:8082"
+      - "${USER_SERVICE_PORT:-8083}:8083"
+    environment:
+      TZ: Asia/Shanghai
+      JAVA_OPTS: "-Xms128m -Xmx256m -XX:+UseG1GC"
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/bysj?useUnicode=true&characterEncoding=utf8&serverTimezone=GMT%2B8
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-1234}
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: "6379"
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - microservice-net
+      - bridge
+    restart: unless-stopped
+
+  coupon-service:
+    build:
+      context: .
+      dockerfile: coupon-service/Dockerfile
+    container_name: bysj-coupon-service
+    ports:
+      - "${COUPON_SERVICE_PORT:-8086}:8086"
+    environment:
+      TZ: Asia/Shanghai
+      JAVA_OPTS: "-Xms128m -Xmx256m -XX:+UseG1GC"
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/bysj?useUnicode=true&characterEncoding=utf8&serverTimezone=GMT%2B8
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-1234}
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: "6379"
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - microservice-net
+      - bridge
+    restart: unless-stopped
+
+  refund-service:
+    build:
+      context: .
+      dockerfile: refund-service/Dockerfile
+    container_name: bysj-refund-service
+    ports:
+      - "${REFUND_SERVICE_PORT:-8087}:8087"
     environment:
       TZ: Asia/Shanghai
       JAVA_OPTS: "-Xms128m -Xmx256m -XX:+UseG1GC"
@@ -123,21 +171,19 @@ services:
       - bridge
     restart: unless-stopped
 
-  user-service:
+  review-service:
     build:
       context: .
-      dockerfile: user-service/Dockerfile
-    container_name: bysj-user-service
+      dockerfile: review-service/Dockerfile
+    container_name: bysj-review-service
     ports:
-      - "${USER_SERVICE_PORT:-8083}:8083"
+      - "${REVIEW_SERVICE_PORT:-8088}:8088"
     environment:
       TZ: Asia/Shanghai
       JAVA_OPTS: "-Xms128m -Xmx256m -XX:+UseG1GC"
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/bysj?useUnicode=true&characterEncoding=utf8&serverTimezone=GMT%2B8
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-1234}
-      SPRING_REDIS_HOST: redis
-      SPRING_REDIS_PORT: "6379"
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
     depends_on:
       mysql:

@@ -3,7 +3,9 @@ package com.example.gateway.service.impl;
 import com.example.gateway.dto.UserLoginInfoDTO;
 import com.example.gateway.entity.Balance;
 import com.example.gateway.entity.User;
+import com.example.gateway.entity.LoginLog;
 import com.example.gateway.mapper.BalanceMapper;
+import com.example.gateway.mapper.LoginLogMapper;
 import com.example.gateway.mapper.UserMapper;
 import com.example.gateway.service.UserService;
 import com.example.gateway.utils.JwtUtils;
@@ -32,6 +34,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private BalanceMapper balanceMapper;
+
+    @Autowired
+    private LoginLogMapper loginLogMapper;
 
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
@@ -63,6 +68,14 @@ public class UserServiceImpl implements UserService {
 
         // 登录成功，清除失败记录
         stringRedisTemplate.delete(failKey);
+
+        // 记录登录成功日志
+        LoginLog loginLog = new LoginLog();
+        loginLog.setUsername(user.getUsername());
+        loginLog.setIp(clientIp);
+        loginLog.setLoginTime(LocalDateTime.now());
+        loginLogMapper.insert(loginLog);
+
         Map<String,Object> claims = new HashMap<>();
         claims.put("id",user.getId());
         claims.put("username",user.getUsername());

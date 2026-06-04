@@ -19,22 +19,37 @@ request.interceptors.request.use(
   (err) => Promise.reject(err)
 )
 
+const statusMessages = {
+  401: '登录已过期，请重新登录',
+  403: '没有权限访问',
+  404: '请求的资源不存在',
+  500: '服务器内部错误'
+}
+
 request.interceptors.response.use(
   (res) => {
     const { code, data, msg } = res.data
     if (code === 1) {
       return data !== undefined ? data : res.data
     }
-    ElMessage.error(msg || '请求失败')
+    // 后端业务错误：只 reject，由调用方决定是否弹提示
     return Promise.reject(new Error(msg || '请求失败'))
   },
   (err) => {
-    if (err.response?.status === 401) {
+    const status = err.response?.status
+    if (status === 401) {
       localStorage.removeItem('user_token')
+      ElMessage.error('登录已过期，请重新登录')
       router.push('/login')
+      return Promise.reject(new Error('登录已过期'))
     }
-    ElMessage.error(err.response?.data?.msg || err.message || '网络错误')
-    return Promise.reject(err)
+    // 优先用后端 msg，其次用状态码对应文案，最后兜底
+    const message = err.response?.data?.msg
+      || statusMessages[status]
+      || err.message
+      || '网络错误'
+    ElMessage.error(message)
+    return Promise.reject(new Error(message))
   }
 )
 

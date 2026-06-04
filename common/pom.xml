@@ -69,6 +69,13 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
+
+        <!-- RabbitMQ（@ConditionalOnClass 控制加载，未引入 AMQP 的服务不会报错） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+            <optional>true</optional>
+        </dependency>
     </dependencies>
 
 </project>
