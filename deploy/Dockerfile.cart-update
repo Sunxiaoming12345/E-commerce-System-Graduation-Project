@@ -1,0 +1,2 @@
+FROM bysj-cart-service:latest
+COPY cart-service.jar /app/app.jar

@@ -52,8 +52,8 @@ public class MyGlobalFilter implements GlobalFilter, Ordered {
     }
 
     private boolean isExclude(String path) {
-        // 定义需要放行的路径
-        return path.contains("/login") || path.contains("/register") ;
+        // 定义需要放行的路径（WebSocket 的 JWT 鉴权在 STOMP CONNECT 帧中处理）
+        return path.contains("/login") || path.contains("/register") || path.contains("/send-code") || path.contains("/ws");
     }
 
 

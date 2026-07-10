@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.orderservice.mapper.UserOrdersMapper">
+    
+    <!-- 分页查询订单 -->
+    <select id="PageQuery" parameterType="com.example.orderservice.dto.MyOrdersPageQueryDTO" resultType="com.example.orderservice.entity.Orders">
+        SELECT * FROM orders
+        WHERE user_id = #{userId}
+        <if test="orderStatus != null and orderStatus != -1">
+            AND order_status = #{orderStatus}
+        </if>
+        ORDER BY create_time DESC
+    </select>
+    
+    <!-- 根据订单ID和用户ID查询订单 -->
+    <select id="getOrderByIdAndUserId" parameterType="java.util.Map" resultType="com.example.orderservice.entity.Orders">
+        SELECT * FROM orders
+        WHERE order_id = #{orderId} AND user_id = #{userId}
+    </select>
+    
+    <!-- 根据订单ID查询订单 -->
+    <select id="getOrderById" parameterType="java.lang.Long" resultType="com.example.orderservice.entity.Orders">
+        SELECT * FROM orders
+        WHERE order_id = #{orderId}
+    </select>
+    
+    <!-- 获取用户最近一条有收货信息的订单 -->
+    <select id="selectLastReceiverInfo" resultType="com.example.orderservice.entity.Orders">
+        SELECT receiver_name, receiver_phone, shipping_address FROM orders
+        WHERE user_id = #{userId}
+          AND receiver_name IS NOT NULL AND receiver_name != ''
+        ORDER BY create_time DESC LIMIT 1
+    </select>
+
+    <!-- 更新收货信息 -->
+    <update id="updateReceiver">
+        UPDATE orders SET receiver_name = #{receiverName},
+            receiver_phone = #{receiverPhone},
+            shipping_address = #{shippingAddress},
+            update_time = NOW()
+        WHERE order_id = #{orderId}
+    </update>
+
+    <!-- 更新订单状态 -->
+    <update id="updateOrderStatus" parameterType="java.util.Map">
+        UPDATE orders
+        SET order_status = #{orderStatus}
+        WHERE order_id = #{orderId}
+    </update>
+    
+    <!-- 更新订单支付信息 -->
+    <update id="updateOrderForPayment" parameterType="java.util.Map">
+        UPDATE orders
+        SET order_status = #{orderStatus}, payment_method = #{paymentMethod}, pay_time = NOW()
+        WHERE order_id = #{orderId}
+    </update>
+    
+    <!-- 保存订单项 -->
+    <insert id="saveOrderItem" parameterType="java.util.Map">
+        INSERT INTO order_items (order_id, product_id, product_name, product_price, quantity, subtotal)
+        VALUES (#{orderId}, #{productId}, #{productName}, #{productPrice}, #{quantity}, #{subtotal})
+    </insert>
+    
+    <!-- 根据订单ID查询订单项列表 -->
+    <select id="selectOrderItemsByOrderId" resultType="com.example.mailadmin.entity.OrderItems">
+        SELECT * FROM order_items WHERE order_id = #{orderId}
+    </select>
+
+    <!-- 批量查询订单项 -->
+    <select id="selectOrderItemsByOrderIds" resultType="com.example.mailadmin.entity.OrderItems">
+        SELECT * FROM order_items WHERE order_id IN
+        <foreach collection="orderIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+    
+    <!-- 根据订单号查询订单 -->
+    <select id="selectByOrderNumber" parameterType="java.lang.String" resultType="com.example.orderservice.entity.Orders">
+        SELECT * FROM orders WHERE order_number = #{orderNumber}
+    </select>
+
+    <!-- 更新订单总金额（优惠券抵扣后） -->
+    <update id="updateOrderTotalAmount">
+        UPDATE orders SET total_amount = #{totalAmount} WHERE order_id = #{orderId}
+    </update>
+
+    <select id="countByUserId" resultType="long">
+        SELECT COUNT(*) FROM orders WHERE user_id = #{userId}
+    </select>
+
+    <!-- 总消费：已付款、已发货、已完成 -->
+    <select id="sumConsumptionByUserId" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(total_amount), 0) FROM orders
+        WHERE user_id = #{userId}
+          AND order_status IN (1, 2, 3)
+    </select>
+    
+</mapper>

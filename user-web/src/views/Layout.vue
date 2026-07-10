@@ -22,6 +22,14 @@
             <el-icon :size="20"><Present /></el-icon>
             <span class="nav-label">领券</span>
           </router-link>
+          <router-link to="/lottery" class="nav-item">
+            <el-icon :size="20"><TrophyBase /></el-icon>
+            <span class="nav-label">抽奖</span>
+          </router-link>
+          <router-link to="/seckill" class="nav-item">
+            <el-icon :size="20"><Timer /></el-icon>
+            <span class="nav-label">秒杀</span>
+          </router-link>
           <router-link to="/refunds" class="nav-item">
             <el-icon :size="20"><Wallet /></el-icon>
             <span class="nav-label">退款</span>
@@ -43,18 +51,13 @@
       </router-view>
     </main>
 
-    <footer class="footer">
-      <div class="footer-inner">
-        <span class="footer-copy">&copy; 2026 邮购商城 &#8226; 毕业设计</span>
-      </div>
-    </footer>
   </div>
 </template>
 
 <script setup>
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
-import { Present, ShoppingCart, Tickets, User, Wallet } from '@element-plus/icons-vue'
+import { Present, ShoppingCart, Tickets, Timer, TrophyBase, User, Wallet } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const userStore = useUserStore()

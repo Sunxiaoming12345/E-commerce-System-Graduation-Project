@@ -10,64 +10,78 @@
 | 密码 | 1234 |
 | SSH | 已配置密钥，免密登录 `ssh root@192.168.100.128` |
 
+## Docker 版本要求（CentOS 7）
+
+CentOS 7 内核 3.10 → Docker CE 最高支持 **24.0.x**（25+ 不再支持）。
+
+```bash
+scp deploy/scripts/install-docker-centos7.sh root@192.168.100.128:/opt/
+ssh root@192.168.100.128 "bash /opt/install-docker-centos7.sh"
+```
+
+仅需 Docker（用于构建镜像 + 基础设施容器），不需要 docker-compose。
+
 ## 架构概览
 
 ```
-                    ┌──────────────────────────────────┐
-  :80 (用户端)  ──▶ │  frontend-nginx (nginx:1.20.2)   │
-  :81 (管理端)  ──▶ │  bind mount: /opt/frontend/      │
-                    └──────────┬───────────────────────┘
-                               │ proxy_pass
-                               ▼
-                    ┌──────────────────────────────────┐
-                    │  bysj-gateway (:8080)             │  ← Spring Cloud Gateway
-                    └──────┬───────────────────────────┘
-           ┌───────────────┼───────────────┬───────────────┬───────────────┬───────────────┬───────────────┐
-           ▼               ▼               ▼               ▼               ▼               ▼               ▼
-    mailadmin       user-service    cart-service   order-service   coupon-service  refund-service  review-service
-     :8081             :8083           :8084           :8085           :8086           :8087           :8088
-           │               │               │               │               │               │               │
-           └───────────────┴───────┬───────┴───────────────┴───────────────┴───────────────┴───────────────┘
-                                   │
-    ┌──────────────────────────────┼──────────────────────────────┐
-    │              基础设施（独立容器）                              │
-    │  MySQL (:3306)  Nacos (:8848)  Redis (:6379)                │
-    │  RabbitMQ (:5672)  MinIO (:9000)                            │
-    └─────────────────────────────────────────────────────────────┘
+                    ┌──────────────────────────────────────────────┐
+  :80 (用户端)  ──▶ │  frontend-nginx (nginx:1.20.2, Docker)       │
+  :81 (管理端)  ──▶ │  upstream → 192.168.100.128:30080            │
+                    └──────────┬───────────────────────────────────┘
+                               │ NodePort
+            ┌──────────────────┴──────────────────────────────────┐
+            ▼                                                      ▼
+   ┌──────────────────────┐  k3s cluster (3 nodes)   ┌──────────────────────┐
+   │  gateway-svc         │                           │  gateway pod         │
+   │  NodePort :30080     │                           │  (多实例, Nacos lb)  │
+   └──────────────────────┘                           └──────────┬───────────┘
+                                                                 │
+        ┌────────────────────────────────────────────────────────┼───────────────┬───────────────┬───────────────┐
+        ▼                ▼               ▼               ▼               ▼               ▼               ▼
+  mailadmin       user-service    cart-service    order-service    coupon-service   refund-service   review-service
+        │                │               │               │               │               │               │
+        └────────────────┴───────────────┴───────────────┴───────────────┴───────────────┴───────────────┘
+                                             │
+         ┌───────────────────────────────────┼───────────────────────────────┐
+         │              基础设施（Docker 容器）                               │
+         │  MySQL (:3306)  Nacos (:8848)  Redis (:6379)  RabbitMQ (:5672)   │
+         │  云服务器: MinIO (110.40.200.239:9000)                             │
+         └───────────────────────────────────────────────────────────────────┘
 ```
 
-## 容器清单
+**请求链路**: 浏览器 → frontend-nginx (:80/:81) → k3s NodePort (:30080) → gateway pod → 各微服务
 
-### 基础设施
+## 基础设施（Docker 容器）
 
 | 容器名 | 镜像 | 端口 | 说明 |
 |--------|------|------|------|
 | bysj-mysql | mysql:8.0 | 3306 | 数据库，root/1234 |
-| nacos | nacos/nacos-server:v2.2.3 | 8848, 9848 | 注册&配置中心 |
-| redis | redis:7-alpine | 6379 | 缓存 |
+| bysj-nacos | nacos/nacos-server:v2.2.3 | 8848, 9848 | 注册&配置中心 |
+| redis-master | redis:7-alpine | 6379 | 缓存 |
 | my-rabbitmq | rabbitmq:3.12-management-alpine | 5672, 15672 | 消息队列，管理后台 :15672 |
-| minio-2024 | minio/minio | 9000, 9001 | 对象存储，控制台 :9001 |
+| minio-2024 | minio/minio | 9000, 9001 | 对象存储（运行在 110.40.200.239 云服务器） |
 
-### 微服务
+## 微服务（k3s Pod）
 
-| 容器名 | 端口 | 说明 |
-|--------|------|------|
-| bysj-gateway | 8080 | Spring Cloud Gateway 网关 |
-| bysj-mailadmin | 8081 | 管理端服务 |
-| bysj-coupon-service | 8086 | 用户优惠券服务 |
-| bysj-refund-service | 8087 | 用户退款服务 |
-| bysj-review-service | 8088 | 用户评价服务 |
-| bysj-user-service | 8083 | 用户服务 |
-| bysj-cart-service | 8084 | 购物车服务 |
-| bysj-order-service | 8085 | 订单服务 |
+| Service | K8s 资源 | 说明 |
+|---------|----------|------|
+| gateway-svc | NodePort :30080 | Spring Cloud Gateway 网关入口 |
+| mailadmin | Deployment | 管理端服务 |
+| user-service | Deployment | 用户服务 |
+| cart-service | Deployment | 购物车服务 |
+| order-service | Deployment | 订单服务 |
+| coupon-service | Deployment | 用户优惠券服务 |
+| refund-service | Deployment | 用户退款服务 |
+| review-service | Deployment | 用户评价服务 |
 
-### 前端
+**命名空间**: `bysj`
+**高可用**: Gateway 和 order-service 通过 k3s Deployment 多副本 + Nacos 服务发现实现负载均衡。
+
+## 前端（Docker 容器）
 
 | 容器名 | 镜像 | 端口 | 说明 |
 |--------|------|------|------|
-| frontend-nginx | nginx:1.20.2 | 80, 81 | 静态文件 + 反向代理 |
-
-**网络**: 所有容器通过 `microservice-net`（bridge）通信。
+| frontend-nginx | nginx:1.20.2 | 80, 81 | 静态文件 + 反向代理到 k3s NodePort |
 
 ## 访问地址
 
@@ -77,49 +91,43 @@
 | 管理端 | http://192.168.100.128:81 | 后台管理 |
 | Nacos | http://192.168.100.128:8848/nacos | 服务注册中心 |
 | RabbitMQ | http://192.168.100.128:15672 | 消息队列管理（guest/guest） |
-| MinIO | http://192.168.100.128:9001 | 对象存储控制台 |
+| MinIO | http://110.40.200.239:9001 | 对象存储控制台（云服务器） |
 
-## Docker Compose 文件
+## 微服务部署（k3s）
 
-项目有两个 compose 文件：
-
-### `docker-compose.yml`（全量部署）
-包含所有基础设施 + 微服务，在 `bysj-network` 上运行。适合**首次裸机部署**。
+使用 `k8s/deploy.sh` 构建镜像并部署到 k3s 集群（master + 2 slave）。
 
 ```bash
-docker compose up -d              # 启动
-docker compose down               # 停止
-docker compose up -d --build      # 重建
+# 在 VM master 节点上执行
+cd /root/bysj
+bash k8s/deploy.sh
 ```
 
-### `docker-compose.apps.yml`（仅应用）
-仅启动 MySQL + 微服务，复用已有的基础设施容器（Redis/Nacos/RabbitMQ/MinIO）。使用外部网络 `microservice-net`。
+部署流程：
+1. 为每个微服务 `docker build` 构建镜像
+2. `docker save` + `k3s ctr image import` 导入到各节点
+3. `kubectl apply -f k8s/<service>.yaml` 部署
+4. 等待 Pod 就绪
 
-> **当前生产环境使用的就是这个。**
-
-```bash
-# 启动（在项目根目录执行）
-docker compose -f docker-compose.apps.yml up -d --build
-
-# 停止
-docker compose -f docker-compose.apps.yml down
-```
+**注意**：如有新 JAR，需要先 `mvn clean package -DskipTests` 生成 `deploy/<service>/` 下的 JAR 文件，再执行 `deploy.sh`。
 
 ## 前端部署
 
 虚拟机目录结构：
 
 ```
-/opt/frontend/
-├── nginx/
-│   └── nginx.conf          # Nginx 主配置
-├── admin/                   # 管理端前端文件（挂载到容器 /usr/share/nginx/html/admin）
-│   ├── index.html
-│   └── assets/
-└── user/                    # 用户端前端文件（挂载到容器 /usr/share/nginx/html/user）
-    ├── index.html
-    └── assets/
+/root/nginx/
+├── nginx.conf              # Nginx 主配置（挂载到容器 /etc/nginx/nginx.conf:ro）
+├── html/
+│   ├── admin/              # 管理端前端文件（挂载到容器 /usr/share/nginx/html/admin）
+│   │   ├── index.html
+│   │   └── assets/
+│   └── user/               # 用户端前端文件（挂载到容器 /usr/share/nginx/html/user）
+│       ├── index.html
+│       └── assets/
 ```
+
+Nginx 通过 `upstream` 块将 API 请求反向代理到 k3s NodePort（`192.168.100.128:30080`）。
 
 目录通过 bind mount 挂载到 `frontend-nginx` 容器，上传即生效，无需重启。
 
@@ -130,9 +138,11 @@ docker compose -f docker-compose.apps.yml down
 cd admin-web && npx vite build
 cd ../user-web && npx vite build
 
-# 2. 上传到虚拟机（免密 SCP）
-scp -r admin-web/dist/* root@192.168.100.128:/opt/frontend/admin/
-scp -r user-web/dist/* root@192.168.100.128:/opt/frontend/user/
+# 2. 清理旧文件 + 上传到虚拟机（免密 SCP）
+ssh root@192.168.100.128 "rm -rf /root/nginx/html/admin/*"
+ssh root@192.168.100.128 "rm -rf /root/nginx/html/user/*"
+scp -r admin-web/dist/* root@192.168.100.128:/root/nginx/html/admin/
+scp -r user-web/dist/* root@192.168.100.128:/root/nginx/html/user/
 
 # 3. 浏览器强制刷新（Ctrl+Shift+R）
 ```
@@ -143,15 +153,20 @@ scp -r user-web/dist/* root@192.168.100.128:/opt/frontend/user/
 # SSH 连接
 ssh root@192.168.100.128
 
-# 查看所有容器状态
-ssh root@192.168.100.128 "docker ps"
+# 查看 k3s 集群状态
+kubectl get nodes
+kubectl get pods -n bysj -o wide
+kubectl get svc -n bysj
 
 # 查看某个服务日志
-ssh root@192.168.100.128 "docker logs -f --tail 100 bysj-gateway"
+kubectl logs -f --tail 100 -l app=gateway -n bysj
 
 # 重启某个服务
-ssh root@192.168.100.128 "docker restart bysj-gateway"
+kubectl rollout restart deployment gateway -n bysj
 
-# 重建所有微服务
-ssh root@192.168.100.128 "cd /path/to/project && docker compose -f docker-compose.apps.yml up -d --build"
+# 查看基础设施容器
+ssh root@192.168.100.128 "docker ps"
+
+# 重新部署所有微服务
+ssh root@192.168.100.128 "cd /root/bysj && bash k8s/deploy.sh"
 ```

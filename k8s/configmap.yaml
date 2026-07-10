@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bysj-config
+  namespace: bysj
+data:
+  # MySQL
+  MYSQL_HOST: "192.168.100.128"
+  MYSQL_PORT: "3306"
+  MYSQL_DB: "bysj"
+  MYSQL_USER: "root"
+  MYSQL_PASSWORD: "1234"
+  # Redis
+  REDIS_HOST: "192.168.100.128"
+  REDIS_PORT: "6379"
+  # Nacos
+  NACOS_ADDR: "192.168.100.128:8848"
+  # RabbitMQ
+  RABBITMQ_HOST: "192.168.100.128"
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_USER: "guest"
+  RABBITMQ_PASS: "guest"
+  # MinIO
+  MINIO_URL: "http://110.40.200.239:9000"
+  MINIO_ACCESS: "root"
+  MINIO_SECRET: "minio236547"
+  MINIO_BUCKET: "images"

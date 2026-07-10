@@ -35,6 +35,15 @@
         <el-menu-item index="/refunds">
           <el-icon><Money /></el-icon><span>退款管理</span>
         </el-menu-item>
+        <el-menu-item index="/lottery">
+          <el-icon><Present /></el-icon><span>抽奖管理</span>
+        </el-menu-item>
+        <el-menu-item index="/seckill">
+          <el-icon><Timer /></el-icon><span>秒杀管理</span>
+        </el-menu-item>
+        <el-menu-item index="/chat">
+          <el-icon><ChatDotRound /></el-icon><span>客服消息</span>
+        </el-menu-item>
       </el-menu>
 
       <div class="aside-footer">
@@ -69,7 +78,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
-import { DataAnalysis, Goods, List, Menu, Money, StarFilled, Ticket, Wallet } from '@element-plus/icons-vue'
+import { ChatDotRound, DataAnalysis, Goods, List, Menu, Money, Present, StarFilled, Ticket, Timer, Wallet } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()

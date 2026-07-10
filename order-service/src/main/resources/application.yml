@@ -1,0 +1,63 @@
+server:
+  address: 0.0.0.0
+  port: 8082
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+spring:
+  jackson:
+    time-zone: Asia/Shanghai
+  redis:
+    host: 192.168.100.128
+    port: 6379
+    database: 0
+  shardingsphere:
+    datasource:
+      names: write-ds, read-ds
+      write-ds:
+        type: com.zaxxer.hikari.HikariDataSource
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        jdbc-url: jdbc:mysql://192.168.100.128:3306/bysj?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
+        username: root
+        password: 1234
+      read-ds:
+        type: com.zaxxer.hikari.HikariDataSource
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        jdbc-url: jdbc:mysql://192.168.100.128:3307/bysj?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
+        username: root
+        password: 1234
+    rules:
+      readwrite-splitting:
+        data-sources:
+          rw_ds:
+            type: Static
+            props:
+              write-data-source-name: write-ds
+              read-data-source-names: read-ds
+              load-balancer-name: round_robin
+    props:
+      sql-show: true
+  application:
+    name: order-service
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 192.168.100.128:8848
+  mvc:
+    pathmatch:
+      matching-strategy: ANT_PATH_MATCHER
+  rabbitmq:
+    host: 192.168.100.128       # RabbitMQ 服务器IP
+    port: 5672                  # AMQP 协议端口
+    username: guest         # 用户名
+    password: guest          # 密码
+    virtual-host: /             # 虚拟主机（默认即可）
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.example.orderservice.entity
+  configuration:
+    #开启驼峰命名
+    map-underscore-to-camel-case: true

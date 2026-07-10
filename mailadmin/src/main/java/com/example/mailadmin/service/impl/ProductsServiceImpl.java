@@ -1,4 +1,5 @@
 package com.example.mailadmin.service.impl;
+import com.example.exception.BusinessException;
 
 import com.example.utils.CacheUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -113,7 +114,7 @@ public class ProductsServiceImpl implements ProductsService
            Products products = productsMapper.selectProductsById(id);
            if (products.getStatus()== StatusConstant.ENABLE)
            {
-               throw new RuntimeException(MessageConstant.PRODUCTS_ON_SALE);
+               throw new BusinessException(MessageConstant.PRODUCTS_ON_SALE);
            }
            productsMapper.deleteProductsByIds(ids);
         }

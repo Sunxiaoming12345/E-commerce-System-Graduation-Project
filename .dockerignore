@@ -1,0 +1,38 @@
+# 前端 node_modules
+**/node_modules/
+**/dist/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Git
+.git/
+.gitignore
+
+# Docker
+.dockerignore
+**/Dockerfile
+
+# 宿主机编译产物（容器内会重新编译）
+**/target/
+
+# 日志
+*.log
+**/logs/
+
+# 临时文件
+*.tmp
+*.swp
+*.bak
+
+# Mac
+.DS_Store
+
+# Shell 脚本（不需要打入镜像）
+*.sh
+
+# 前端源码（后端镜像不需要）
+admin-web/
+user-web/

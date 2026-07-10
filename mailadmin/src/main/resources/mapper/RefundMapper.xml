@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mailadmin.mapper.RefundMapper">
+
+    <select id="pageQuery" resultType="com.example.entity.Refund">
+        SELECT * FROM refunds
+        <where>
+            <if test="orderId != null">AND order_id = #{orderId}</if>
+            <if test="userId != null">AND user_id = #{userId}</if>
+            <if test="status != null">AND status = #{status}</if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+</mapper>

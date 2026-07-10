@@ -1,5 +1,6 @@
 package com.example.gateway.service.impl;
 
+import com.example.exception.BusinessException;
 import com.example.gateway.dto.AdminLoginInfoDTO;
 import com.example.gateway.entity.Admin;
 import com.example.gateway.mapper.AdminMapper;
@@ -34,7 +35,7 @@ public class AdminServiceImpl implements AdminService {
 
         String failCount = stringRedisTemplate.opsForValue().get(failKey);
         if (failCount != null && Integer.parseInt(failCount) >= MAX_FAIL_COUNT) {
-            throw new RuntimeException("账号已被锁定，请" + LOCK_MINUTES + "分钟后再试");
+            throw new BusinessException("账号已被锁定，请" + LOCK_MINUTES + "分钟后再试");
         }
 
         Admin admin = adminMapper.adminLogin(adminLoginInfoDTO.getUsername(), adminLoginInfoDTO.getPassword());
@@ -44,13 +45,14 @@ public class AdminServiceImpl implements AdminService {
                 stringRedisTemplate.expire(failKey, LOCK_MINUTES, TimeUnit.MINUTES);
             }
             int remaining = MAX_FAIL_COUNT - count.intValue();
-            throw new RuntimeException("账号或密码错误，还剩" + remaining + "次尝试机会");
+            throw new BusinessException("账号或密码错误，还剩" + remaining + "次尝试机会");
         }
 
         stringRedisTemplate.delete(failKey);
         Map<String,Object> claims = new HashMap<>();
         claims.put("id", admin.getId());
         claims.put("username", admin.getUsername());
+        claims.put("role", "admin");
         String jwt = JwtUtils.generateToken(claims);
         return new AdminLoginInfo(admin.getUsername(), null, jwt);
     }

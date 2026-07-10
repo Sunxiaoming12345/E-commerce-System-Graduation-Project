@@ -60,26 +60,27 @@
         </div>
 
         <!-- 优惠券 -->
-        <div class="section" v-if="coupons.length > 0">
+        <div class="section" v-if="couponGroups.length > 0">
           <h3>优惠券</h3>
           <div class="coupon-list">
             <div
-              v-for="c in coupons"
-              :key="c.userCouponId"
+              v-for="g in couponGroups"
+              :key="g.couponId"
               class="coupon-card"
-              :class="{ selected: selectedCouponId === c.userCouponId }"
-              @click="onCouponSelect(selectedCouponId === c.userCouponId ? null : c.userCouponId)"
+              :class="{ selected: selectedCouponId && g.ids.includes(selectedCouponId) }"
+              @click="onCouponSelect(selectedCouponId && g.ids.includes(selectedCouponId) ? null : g.ids[0])"
             >
               <div class="coupon-left">
-                <span class="coupon-value" v-if="c.type === 0">¥{{ c.discountValue }}</span>
-                <span class="coupon-value" v-else>{{ (c.discountValue * 10).toFixed(1) }}折</span>
-                <span class="coupon-name">{{ c.name }}</span>
+                <span class="coupon-value" v-if="g.type === 0">¥{{ g.discountValue }}</span>
+                <span class="coupon-value" v-else>{{ (g.discountValue * 10).toFixed(1) }}折</span>
+                <span class="coupon-name">{{ g.name }}</span>
               </div>
               <div class="coupon-right">
-                <span class="coupon-condition">满 ¥{{ c.minAmount }} 可用</span>
-                <span class="coupon-expire">有效期至 {{ c.endTime?.substring(0, 10) }}</span>
+                <span class="coupon-condition">满 ¥{{ g.minAmount }} 可用</span>
+                <span class="coupon-expire">有效期至 {{ g.endTime?.substring(0, 10) }}</span>
               </div>
-              <el-icon v-if="selectedCouponId === c.userCouponId" class="coupon-check" color="#fff" :size="20"><CircleCheckFilled /></el-icon>
+              <el-badge :value="g.count" class="coupon-count" v-if="g.count > 1" />
+              <el-icon v-if="selectedCouponId && g.ids.includes(selectedCouponId)" class="coupon-check" color="#fff" :size="20"><CircleCheckFilled /></el-icon>
             </div>
           </div>
         </div>
@@ -185,6 +186,7 @@ const shippingFee = ref(0)
 
 // 优惠券相关
 const coupons = ref([])
+const couponGroups = ref([]) // 按 coupon_id 合并后的优惠券分组
 const selectedCouponId = ref(null)
 const couponDiscount = ref(0) // 优惠券抵扣金额
 
@@ -283,15 +285,28 @@ const loadCoupons = async () => {
   try {
     const all = await getMyCoupons(0) // status=0 未使用
     // 过滤出满足最低消费金额的优惠券
-    coupons.value = (all || []).filter(c => {
+    const filtered = (all || []).filter(c => {
       return totalPrice.value >= (c.minAmount || 0)
     })
-    if (coupons.value.length > 0) {
-      console.log('可用的优惠券：', coupons.value)
+    // 按 coupon_id 合并相同优惠券
+    const groupMap = new Map()
+    filtered.forEach(c => {
+      const key = c.couponId
+      if (groupMap.has(key)) {
+        const g = groupMap.get(key)
+        g.count++
+        g.ids.push(c.userCouponId)
+      } else {
+        groupMap.set(key, { ...c, count: 1, ids: [c.userCouponId] })
+      }
+    })
+    couponGroups.value = Array.from(groupMap.values())
+    if (couponGroups.value.length > 0) {
+      console.log('可用的优惠券（已合并）：', couponGroups.value)
     }
   } catch (error) {
     console.error('加载优惠券失败', error)
-    coupons.value = []
+    couponGroups.value = []
   }
 }
 
@@ -378,7 +393,7 @@ const submitOrder = async () => {
       receiverPhone: form.value.receiverPhone,
       shippingAddress: form.value.shippingAddress,
       paymentMethod: parseInt(form.value.paymentMethod),
-      totalAmount: actualAmount.value,
+      totalAmount: totalPrice.value + shippingFee.value,
       idempotentToken: submitToken.value
     }
     // 如果选择了优惠券，传递 userCouponId

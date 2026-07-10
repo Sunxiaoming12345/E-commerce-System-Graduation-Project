@@ -1,5 +1,7 @@
 package com.example.gateway.controller.user;
 
+import com.example.context.BaseContext;
+import com.example.exception.BusinessException;
 import com.example.gateway.dto.UserLoginInfoDTO;
 import com.example.gateway.entity.User;
 import com.example.gateway.service.UserService;
@@ -7,15 +9,11 @@ import com.example.gateway.vo.UserLoginInfo;
 import com.example.result.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.example.annotation.RateLimit;
 import com.example.gateway.dto.UserRegisterDTO;
+import java.util.Map;
 
 @Slf4j
 @RestController("userLoginController")
@@ -69,6 +67,21 @@ public class LoginController {
         userService.sendVerificationCode(phone);
         log.info("向手机号 {} 发送验证码", phone);
         return Result.success("验证码发送成功");
+    }
+
+    // 忘记密码
+    @PostMapping("/reset-password")
+    @RateLimit(key = "resetPwd", max = 3, seconds = 60, keyType = "ip", message = "操作过于频繁")
+    public Result<Void> resetPassword(@RequestBody Map<String, String> body) {
+        userService.resetPassword(body.get("phone"), body.get("code"), body.get("newPassword"));
+        return Result.success();
+    }
+
+    // 编辑个人资料
+    @PutMapping("/profile")
+    public Result<Object> updateProfile(@RequestBody User user) {
+        Long userId = com.example.context.BaseContext.getCurrentId();
+        return Result.success(userService.updateProfile(userId, user));
     }
 
 }

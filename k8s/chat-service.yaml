@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chat-service
+  namespace: bysj
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chat-service
+  template:
+    metadata:
+      labels:
+        app: chat-service
+    spec:
+      nodeName: zabbix-monitor
+      containers:
+      - name: chat-service
+        image: bysj-chat-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8089
+        env:
+        - name: MYSQL_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: bysj-config
+              key: MYSQL_HOST
+        - name: MYSQL_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: bysj-config
+              key: MYSQL_PORT
+        - name: MYSQL_DB
+          valueFrom:
+            configMapKeyRef:
+              name: bysj-config
+              key: MYSQL_DB
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:mysql://$(MYSQL_HOST):$(MYSQL_PORT)/$(MYSQL_DB)?useUnicode=true&characterEncoding=utf8&serverTimezone=GMT%2B8"
+        - name: SPRING_DATASOURCE_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: bysj-config
+              key: MYSQL_USER
+        - name: SPRING_DATASOURCE_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              name: bysj-config
+              key: MYSQL_PASSWORD
+        - name: JAVA_OPTS
+          value: "-Xms64m -Xmx128m -XX:+UseSerialGC"
+        - name: SPRING_REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: bysj-config
+              key: REDIS_HOST
+        - name: SPRING_REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: bysj-config
+              key: REDIS_PORT
+        - name: SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR
+          valueFrom:
+            configMapKeyRef:
+              name: bysj-config
+              key: NACOS_ADDR
+        - name: SPRING_CLOUD_NACOS_DISCOVERY_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chat-service
+  namespace: bysj
+spec:
+  selector:
+    app: chat-service
+  ports:
+  - port: 8089
+    targetPort: 8089
+    name: http

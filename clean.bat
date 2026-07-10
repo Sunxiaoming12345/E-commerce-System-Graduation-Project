@@ -1,0 +1,9 @@
+@echo off
+echo 1/3 Windows Update...
+del /f /s /q C:\Windows\SoftwareDistribution\Download\*.* 2>nul
+echo 2/3 NVIDIA...
+rmdir /s /q "%LOCALAPPDATA%\NVIDIA" 2>nul
+del /f /s /q "C:\ProgramData\NVIDIA Corporation\Downloader\*.*" 2>nul
+echo 3/3 CrashDumps...
+del /f /s /q "%LOCALAPPDATA%\CrashDumps\*.*" 2>nul
+echo Done.

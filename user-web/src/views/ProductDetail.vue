@@ -63,6 +63,7 @@
           <el-button type="primary" class="submit-review" @click="handleSubmitReview">提交评价</el-button>
         </div>
       </div>
+      <ChatWidget v-if="userStore.token" :productId="product?.id" :productName="product?.name" />
     </div>
   </div>
   <div v-else class="empty-page"><el-empty description="商品不存在" /></div>
@@ -78,6 +79,7 @@ import { getProductReviews, submitReview } from '@/api/reviews'
 import { useUserStore } from '@/store/user'
 import { ShoppingCart } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import ChatWidget from '@/components/ChatWidget.vue'
 
 const route = useRoute(); const router = useRouter()
 const userStore = useUserStore()

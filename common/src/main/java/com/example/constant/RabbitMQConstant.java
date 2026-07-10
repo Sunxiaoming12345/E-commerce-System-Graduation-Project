@@ -42,4 +42,23 @@ public class RabbitMQConstant {
     // 退款路由键
     public static final String REFUND_ROUTING_KEY = "refund.routing.key";
 
+    // 抽奖缓存更新交换机
+    public static final String LOTTERY_EXCHANGE_NAME = "lottery.exchange";
+    // 抽奖缓存更新队列
+    public static final String LOTTERY_QUEUE_NAME = "lottery.queue";
+    // 抽奖缓存更新路由键
+    public static final String LOTTERY_ROUTING_KEY = "lottery.cache.refresh.routing.key";
+
+    // 秒杀交换机（削峰填谷）
+    public static final String SECKILL_EXCHANGE_NAME = "seckill.exchange";
+    public static final String SECKILL_QUEUE_NAME = "seckill.queue";
+    public static final String SECKILL_ROUTING_KEY = "seckill.routing.key";
+
+    // 优惠券缓存更新交换机
+    public static final String COUPON_CACHE_EXCHANGE_NAME = "coupon.cache.exchange";
+    // 优惠券缓存更新队列
+    public static final String COUPON_CACHE_QUEUE_NAME = "coupon.cache.queue";
+    // 优惠券缓存更新路由键
+    public static final String COUPON_CACHE_ROUTING_KEY = "coupon.cache.refresh.routing.key";
+
 }

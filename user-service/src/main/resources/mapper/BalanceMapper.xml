@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.example.userservice.mapper.BalanceMapper">
+
+    <!-- 根据用户ID获取余额 -->
+    <select id="getBalanceByUserId" resultType="com.example.userservice.entity.Balance">
+        SELECT
+            id,
+            user_id AS userId,
+            balance,
+            create_time AS createTime,
+            update_time AS updateTime
+        FROM
+            balance
+        WHERE
+            user_id = #{userId}
+    </select>
+
+    <!-- 创建余额记录 -->
+    <insert id="createBalance">
+        INSERT INTO balance (user_id, balance)
+        VALUES (#{balance.userId}, #{balance.balance})
+    </insert>
+
+    <!-- 更新余额 -->
+    <update id="updateBalance">
+        UPDATE balance
+        SET balance = #{balance},
+            update_time = CURRENT_TIMESTAMP
+        WHERE
+            user_id = #{userId}
+    </update>
+
+    <!-- 增加余额 -->
+    <update id="increaseBalance">
+        UPDATE balance
+        SET balance = balance + #{amount},
+            update_time = CURRENT_TIMESTAMP
+        WHERE
+            user_id = #{userId}
+    </update>
+
+    <!-- 减少余额 -->
+    <update id="decreaseBalance">
+        UPDATE balance
+        SET balance = balance - #{amount},
+            update_time = CURRENT_TIMESTAMP
+        WHERE
+            user_id = #{userId}
+          AND balance >= #{amount}
+    </update>
+
+</mapper>

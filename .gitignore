@@ -46,4 +46,8 @@ yarn-error.log*
 ### Admin Web ###
 admin-web/node_modules/
 admin-web/dist/
-admin-web/.vite/
+admin-web/.vite/deploy/*/app.jar
+deploy/*/app.jar
+deploy/*.jar
+deploy/*/app.jar
+deploy/*.jar

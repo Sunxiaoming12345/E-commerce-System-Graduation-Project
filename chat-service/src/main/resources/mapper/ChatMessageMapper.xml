@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.chat.mapper.ChatMessageMapper">
+
+    <select id="selectByProductAndUser" resultType="com.example.entity.ChatMessage">
+        SELECT * FROM chat_messages
+        WHERE product_id = #{productId}
+          AND ((sender_id = #{userId} AND sender_type = 0) OR (sender_id = #{adminId} AND sender_type = 1))
+        ORDER BY create_time ASC
+    </select>
+
+    <select id="selectSessions" resultType="com.example.chat.vo.ChatSessionVO">
+        SELECT
+            cm.sender_id AS userId,
+            '' AS userName,
+            cm.product_id AS productId,
+            '' AS productName,
+            (SELECT content FROM chat_messages cm2
+             WHERE cm2.product_id = cm.product_id AND cm2.sender_id = cm.sender_id AND cm2.sender_type = 0
+             ORDER BY cm2.create_time DESC LIMIT 1) AS lastMessage,
+            (SELECT COUNT(*) FROM chat_messages cm3
+             WHERE cm3.product_id = cm.product_id AND cm3.sender_id = cm.sender_id
+             AND cm3.sender_type = 0 AND cm3.is_read = 0) AS unreadCount,
+            (SELECT MIN(cm4.create_time) FROM chat_messages cm4
+             WHERE cm4.product_id = cm.product_id AND cm4.sender_id = cm.sender_id AND cm4.sender_type = 0) AS lastTime
+        FROM chat_messages cm
+        WHERE cm.sender_type = 0
+        GROUP BY cm.sender_id, cm.product_id
+        ORDER BY lastTime DESC
+    </select>
+
+</mapper>

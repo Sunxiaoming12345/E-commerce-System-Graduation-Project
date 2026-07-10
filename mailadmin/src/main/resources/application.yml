@@ -10,17 +10,32 @@ server:
 spring:
   jackson:
     time-zone: Asia/Shanghai
-  datasource:
-    url: jdbc:mysql://192.168.100.1:3306/bysj?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8
-    username: root
-    password: 1234
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    hikari:
-      minimum-idle: 5
-      maximum-pool-size: 20
-      connection-timeout: 5000
-      idle-timeout: 300000
-      max-lifetime: 600000
+  shardingsphere:
+    datasource:
+      names: write-ds, read-ds
+      write-ds:
+        type: com.zaxxer.hikari.HikariDataSource
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        jdbc-url: jdbc:mysql://192.168.100.128:3306/bysj?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
+        username: root
+        password: 1234
+      read-ds:
+        type: com.zaxxer.hikari.HikariDataSource
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        jdbc-url: jdbc:mysql://192.168.100.128:3307/bysj?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
+        username: root
+        password: 1234
+    rules:
+      readwrite-splitting:
+        data-sources:
+          rw_ds:
+            type: Static
+            props:
+              write-data-source-name: write-ds
+              read-data-source-names: read-ds
+              load-balancer-name: round_robin
+    props:
+      sql-show: true
   application:
     name: mailadmin
   cloud:

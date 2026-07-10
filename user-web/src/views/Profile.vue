@@ -2,13 +2,14 @@
   <div class="profile">
     <div class="container">
       <div class="profile-top">
-        <el-avatar :size="64" class="avatar">{{ (userStore.userInfo?.name || userStore.username || 'U').charAt(0) }}</el-avatar>
+        <el-avatar :size="64" :src="userStore.userInfo?.avatar">{{ (userStore.userInfo?.name || userStore.username || 'U').charAt(0) }}</el-avatar>
         <div class="top-info">
           <h2>{{ userStore.userInfo?.name || userStore.username || '用户' }}</h2>
           <p>{{ userStore.userInfo?.phone || '未绑定手机号' }}</p>
         </div>
         <div class="top-acts">
           <el-button @click="openEdit">编辑资料</el-button>
+          <el-button @click="openPwd">修改密码</el-button>
           <el-button plain @click="handleLogout">退出登录</el-button>
         </div>
       </div>
@@ -37,6 +38,12 @@
 
       <el-dialog v-model="dialogVisible" title="编辑个人资料" width="440px">
         <el-form :model="form" label-width="100px">
+          <el-form-item label="头像">
+            <el-upload :show-file-list="false" :before-upload="handleAvatar" accept="image/*">
+              <img v-if="form.avatar" :src="form.avatar" style="width:64px;height:64px;border-radius:50%;cursor:pointer" />
+              <el-icon v-else :size="64" style="cursor:pointer"><Plus /></el-icon>
+            </el-upload>
+          </el-form-item>
           <el-form-item label="姓名"><el-input v-model="form.name" /></el-form-item>
           <el-form-item label="联系电话"><el-input v-model="form.phone" /></el-form-item>
           <el-form-item label="默认收货人"><el-input v-model="form.defaultReceiver" /></el-form-item>
@@ -44,6 +51,15 @@
           <el-form-item label="默认收货地址"><el-input v-model="form.defaultAddress" type="textarea" :rows="3" /></el-form-item>
         </el-form>
         <template #footer><el-button @click="dialogVisible=false">取消</el-button><el-button type="primary" @click="submitForm">保存</el-button></template>
+      </el-dialog>
+
+      <!-- 修改密码弹窗 -->
+      <el-dialog v-model="pwdVisible" title="修改密码" width="400px">
+        <el-form :model="pwdForm" label-width="100px">
+          <el-form-item label="原密码"><el-input v-model="pwdForm.oldPassword" type="password" show-password /></el-form-item>
+          <el-form-item label="新密码"><el-input v-model="pwdForm.newPassword" type="password" show-password /></el-form-item>
+        </el-form>
+        <template #footer><el-button @click="pwdVisible=false">取消</el-button><el-button type="primary" @click="submitPwd">确定</el-button></template>
       </el-dialog>
     </div>
   </div>
@@ -56,18 +72,39 @@ import { useUserStore } from '@/store/user'
 import { ElMessage } from 'element-plus'
 import { getBalance } from '@/api/balance'
 import { getOrderStats } from '@/api/orders'
+import request from '@/utils/request'
 
 const router = useRouter(); const userStore = useUserStore()
-const balance = ref(0); const orderStats = ref({ totalOrders: 0, totalConsumption: 0 }); const dialogVisible = ref(false)
-const form = ref({ name: '', phone: '', defaultReceiver: '', defaultPhone: '', defaultAddress: '' })
+const balance = ref(0); const orderStats = ref({ totalOrders: 0, totalConsumption: 0 })
+const dialogVisible = ref(false); const pwdVisible = ref(false)
+const form = ref({ name: '', phone: '', avatar: '', defaultReceiver: '', defaultPhone: '', defaultAddress: '' })
+const pwdForm = ref({ oldPassword: '', newPassword: '' })
 
 const fmt = (v) => { const n = Number(v); return Number.isNaN(n) ? '0.00' : n.toFixed(2) }
 
-watch(() => userStore.userInfo, (info) => { if (info) { form.value = { name: info.name || '', phone: info.phone || '', defaultReceiver: info.defaultReceiver || '', defaultPhone: info.defaultPhone || '', defaultAddress: info.defaultAddress || '' } } }, { immediate: true })
+watch(() => userStore.userInfo, (info) => { if (info) { form.value = { name: info.name || '', phone: info.phone || '', avatar: info.avatar || '', defaultReceiver: info.defaultReceiver || '', defaultPhone: info.defaultPhone || '', defaultAddress: info.defaultAddress || '' } } }, { immediate: true })
 
 const openEdit = () => { dialogVisible.value = true }
+const openPwd = () => { pwdVisible.value = true; pwdForm.value = { oldPassword: '', newPassword: '' } }
+
+const handleAvatar = async (file) => {
+  const fd = new FormData(); fd.append('file', file)
+  try {
+    const data = await request.post('/user/avatar', fd, { timeout: 60000 })
+    if (data?.url) {
+      form.value.avatar = data.url
+      await userStore.updateInfo({ avatar: data.url })
+      ElMessage.success('头像上传成功')
+    }
+  } catch (e) { ElMessage.error('上传失败') }
+  return false
+}
+
 const submitForm = async () => {
-  try { const ok = await userStore.updateInfo(form.value); ElMessage[ok?'success':'error'](ok?'更新成功':'更新失败'); if (ok) dialogVisible.value = false } catch { ElMessage.error('更新失败') }
+  try { await userStore.updateInfo(form.value); ElMessage.success('更新成功'); dialogVisible.value = false } catch (e) { ElMessage.error(e.message||'更新失败') }
+}
+const submitPwd = async () => {
+  try { await request.put('/user/password', pwdForm.value); ElMessage.success('密码已修改'); pwdVisible.value = false } catch (e) { ElMessage.error(e.message||'修改失败') }
 }
 const handleLogout = () => { userStore.logout(); router.push('/login') }
 

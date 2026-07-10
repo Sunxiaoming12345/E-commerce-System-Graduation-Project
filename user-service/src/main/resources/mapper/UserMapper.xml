@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.example.userservice.mapper.UserMapper">
+
+    <update id="updateUser">
+        update user
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="defaultReceiver != null">default_receiver = #{defaultReceiver},</if>
+            <if test="defaultPhone != null">default_phone = #{defaultPhone},</if>
+            <if test="defaultAddress != null">default_address = #{defaultAddress},</if>
+            <if test="avatar != null">avatar = #{avatar},</if>
+            update_time = CURRENT_TIMESTAMP
+        </set>
+        where id = #{id}
+    </update>
+
+</mapper>

@@ -44,11 +44,22 @@
 
           <!-- Shipping -->
           <div class="card">
-            <h3>收货信息</h3>
-            <div class="info-grid">
-              <div><span class="lbl">收货人</span> {{ order.order.receiverName }}</div>
-              <div><span class="lbl">电话</span> {{ order.order.receiverPhone }}</div>
-              <div><span class="lbl">地址</span> {{ order.order.shippingAddress }}</div>
+            <h3>收货信息
+              <el-button v-if="order.order.orderStatus === 0 && !editingReceiver" size="small" type="primary" link @click="startEditReceiver">编辑</el-button>
+            </h3>
+            <div class="info-grid" v-if="!editingReceiver">
+              <div><span class="lbl">收货人</span> {{ order.order.receiverName || '待填写' }}</div>
+              <div><span class="lbl">电话</span> {{ order.order.receiverPhone || '待填写' }}</div>
+              <div><span class="lbl">地址</span> {{ order.order.shippingAddress || '待填写' }}</div>
+            </div>
+            <div v-else style="display:flex;flex-direction:column;gap:12px">
+              <el-input v-model="editForm.receiverName" placeholder="收货人" />
+              <el-input v-model="editForm.receiverPhone" placeholder="电话" />
+              <el-input v-model="editForm.shippingAddress" placeholder="地址" />
+              <div>
+                <el-button size="small" type="primary" @click="saveReceiver">保存</el-button>
+                <el-button size="small" @click="editingReceiver=false">取消</el-button>
+              </div>
             </div>
           </div>
         </div>
@@ -116,6 +127,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getOrderDetail, payOrder, cancelOrder } from '@/api/orders'
+import request from '@/utils/request'
 import { ArrowLeft, Check } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
@@ -124,6 +136,8 @@ const router = useRouter()
 const order = ref(null)
 const paymentMethod = ref('2')
 const countdownSeconds = ref(0)
+const editingReceiver = ref(false)
+const editForm = ref({ receiverName: '', receiverPhone: '', shippingAddress: '' })
 let timer = null
 
 const statusOrder = [0, 1, 2, 3]
@@ -162,10 +176,30 @@ const startCountdown = () => {
   }, 1000)
 }
 
+function startEditReceiver() {
+  editForm.value = {
+    receiverName: order.value.order.receiverName || '',
+    receiverPhone: order.value.order.receiverPhone || '',
+    shippingAddress: order.value.order.shippingAddress || ''
+  }
+  editingReceiver.value = true
+}
+
+async function saveReceiver() {
+  try {
+    await request.put(`/user/orders/receiver/${order.value.order.orderId}`, editForm.value)
+    order.value.order.receiverName = editForm.value.receiverName
+    order.value.order.receiverPhone = editForm.value.receiverPhone
+    order.value.order.shippingAddress = editForm.value.shippingAddress
+    editingReceiver.value = false
+    ElMessage.success('收货信息已更新')
+  } catch (e) { ElMessage.error(e.message || '更新失败') }
+}
+
 const handlePay = async () => {
   try {
     await payOrder({ orderId: order.value.order.orderId, paymentMethod: parseInt(paymentMethod.value) })
-    ElMessage.success('支付成功'); clearInterval(timer); load()
+    ElMessage.success('支付成功，即将跳转'); clearInterval(timer); setTimeout(() => router.push('/orders'), 1500)
   } catch { ElMessage.error('支付失败') }
 }
 const handleCancel = async () => {

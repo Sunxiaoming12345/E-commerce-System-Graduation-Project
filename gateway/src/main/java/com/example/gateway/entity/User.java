@@ -17,6 +17,7 @@ public class User {
     private String defaultReceiver;    // 常用收货人
     private String defaultPhone;       // 常用联系电话
     private String defaultAddress;     // 常用收货地址
+    private String avatar;             // 头像 URL
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }

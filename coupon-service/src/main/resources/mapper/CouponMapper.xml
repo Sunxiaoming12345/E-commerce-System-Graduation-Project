@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mailcoupon.mapper.CouponMapper">
+
+    <select id="selectUserCoupons" resultType="com.example.mailcoupon.vo.CouponVO">
+        SELECT
+            uc.id AS userCouponId,
+            uc.status AS userCouponStatus,
+            c.coupon_id AS couponId,
+            c.name,
+            c.type,
+            c.discount_value AS discountValue,
+            c.min_amount AS minAmount,
+            c.total_count AS totalCount,
+            c.used_count AS usedCount,
+            c.start_time AS startTime,
+            c.end_time AS endTime,
+            c.is_lottery AS isLottery,
+            uc.create_time AS createTime
+        FROM user_coupons uc
+        JOIN coupons c ON uc.coupon_id = c.coupon_id
+        WHERE uc.user_id = #{userId}
+        <if test="status != null">AND uc.status = #{status}</if>
+        ORDER BY uc.create_time DESC
+    </select>
+
+</mapper>

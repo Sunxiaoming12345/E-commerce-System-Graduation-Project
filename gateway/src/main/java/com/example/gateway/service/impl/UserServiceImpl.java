@@ -1,5 +1,6 @@
 package com.example.gateway.service.impl;
 
+import com.example.exception.BusinessException;
 import com.example.gateway.dto.UserLoginInfoDTO;
 import com.example.gateway.entity.Balance;
 import com.example.gateway.entity.User;
@@ -7,6 +8,7 @@ import com.example.gateway.entity.LoginLog;
 import com.example.gateway.mapper.BalanceMapper;
 import com.example.gateway.mapper.LoginLogMapper;
 import com.example.gateway.mapper.UserMapper;
+import com.example.gateway.service.LoginLogAsyncService;
 import com.example.gateway.service.UserService;
 import com.example.gateway.utils.JwtUtils;
 import com.example.gateway.vo.UserLoginInfo;
@@ -39,6 +41,9 @@ public class UserServiceImpl implements UserService {
     private LoginLogMapper loginLogMapper;
 
     @Autowired
+    private LoginLogAsyncService loginLogAsyncService;
+
+    @Autowired
     private StringRedisTemplate stringRedisTemplate;
 
     private static final String LOGIN_FAIL_PREFIX = "login:fail:";
@@ -52,7 +57,7 @@ public class UserServiceImpl implements UserService {
         // 检查是否已被锁定
         String failCount = stringRedisTemplate.opsForValue().get(failKey);
         if (failCount != null && Integer.parseInt(failCount) >= MAX_FAIL_COUNT) {
-            throw new RuntimeException("账号已被锁定，请" + LOCK_MINUTES + "分钟后再试");
+            throw new BusinessException("账号已被锁定，请" + LOCK_MINUTES + "分钟后再试");
         }
 
         User user = userMapper.login(userLoginInfoDTO.getUsername(), userLoginInfoDTO.getPassword());
@@ -63,22 +68,23 @@ public class UserServiceImpl implements UserService {
                 stringRedisTemplate.expire(failKey, LOCK_MINUTES, TimeUnit.MINUTES);
             }
             int remaining = MAX_FAIL_COUNT - count.intValue();
-            throw new RuntimeException("账号或密码错误，还剩" + remaining + "次尝试机会");
+            throw new BusinessException("账号或密码错误，还剩" + remaining + "次尝试机会");
         }
 
         // 登录成功，清除失败记录
         stringRedisTemplate.delete(failKey);
 
-        // 记录登录成功日志
+        // 异步记录登录成功日志（不阻塞登录响应）
         LoginLog loginLog = new LoginLog();
         loginLog.setUsername(user.getUsername());
         loginLog.setIp(clientIp);
         loginLog.setLoginTime(LocalDateTime.now());
-        loginLogMapper.insert(loginLog);
+        loginLogAsyncService.save(loginLog);
 
         Map<String,Object> claims = new HashMap<>();
         claims.put("id",user.getId());
         claims.put("username",user.getUsername());
+        claims.put("role", "user");
         String jwt =  JwtUtils.generateToken(claims);
         return new UserLoginInfo(user.getUsername(),null,jwt);
     }
@@ -87,13 +93,13 @@ public class UserServiceImpl implements UserService {
     public User register(UserRegisterDTO userRegisterDTO) {
         // 验证验证码
         if (!verificationCodeUtils.verifyCode(userRegisterDTO.getPhone(), userRegisterDTO.getCode())) {
-            throw new RuntimeException("验证码错误");
+            throw new BusinessException("验证码错误");
         }
         
         // 检查用户名是否已存在
         User existingUser = userMapper.findByUsername(userRegisterDTO.getUsername());
         if (existingUser != null) {
-            throw new RuntimeException("用户名已存在");
+            throw new BusinessException("用户名已存在");
         }
         
         // 创建User对象
@@ -126,12 +132,42 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void sendVerificationCode(String phone) {
-        // 生成验证码
         String code = verificationCodeUtils.generateCode();
-        // 存储验证码
         verificationCodeUtils.storeCode(phone, code);
-        // 模拟发送验证码，实际生产环境中应该调用短信服务
         log.info("向手机号 {} 发送验证码: {}", phone, code);
     }
+
+    @Override
+    public void changePassword(Long userId, String oldPassword, String newPassword) {
+        User user = userMapper.findById(userId);
+        if (user == null) throw new BusinessException("用户不存在");
+        if (!user.getPassword().equals(oldPassword)) throw new BusinessException("原密码错误");
+        if (newPassword.length() < 6) throw new BusinessException("新密码至少6位");
+        userMapper.updatePassword(userId, newPassword);
+    }
+
+    @Override
+    public void resetPassword(String phone, String code, String newPassword) {
+        if (!verificationCodeUtils.verifyCode(phone, code))
+            throw new BusinessException("验证码错误");
+        User user = userMapper.findByPhone(phone);
+        if (user == null) throw new BusinessException("手机号未注册");
+        if (newPassword.length() < 6) throw new BusinessException("新密码至少6位");
+        userMapper.updatePassword(user.getId(), newPassword);
+        verificationCodeUtils.removeCode(phone);
+    }
+
+    @Override
+    public User getUserInfo(Long userId) {
+        return userMapper.findById(userId);
+    }
+
+    @Override
+    public User updateProfile(Long userId, User profile) {
+        profile.setId(userId);
+        userMapper.updateProfile(profile);
+        return userMapper.findById(userId);
+    }
+
 }
 

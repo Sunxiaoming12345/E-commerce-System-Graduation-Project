@@ -21,7 +21,10 @@ const routes = [
       { path: 'payments', name: 'Payments', component: () => import('@/views/Payments.vue'), meta: { title: '支付记录' } },
       { path: 'reviews', name: 'Reviews', component: () => import('@/views/Reviews.vue'), meta: { title: '评价管理' } },
       { path: 'coupons', name: 'Coupons', component: () => import('@/views/Coupons.vue'), meta: { title: '优惠券管理' } },
-      { path: 'refunds', name: 'Refunds', component: () => import('@/views/Refunds.vue'), meta: { title: '退款管理' } }
+      { path: 'refunds', name: 'Refunds', component: () => import('@/views/Refunds.vue'), meta: { title: '退款管理' } },
+      { path: 'lottery', name: 'Lottery', component: () => import('@/views/Lottery.vue'), meta: { title: '抽奖管理' } },
+      { path: 'seckill', name: 'Seckill', component: () => import('@/views/Seckill.vue'), meta: { title: '秒杀管理' } },
+      { path: 'chat', name: 'Chat', component: () => import('@/views/ChatManagement.vue'), meta: { title: '客服消息' } }
     ]
   },
   // 兼容旧路径 /home 和未匹配路由 → 重定向到工作台
